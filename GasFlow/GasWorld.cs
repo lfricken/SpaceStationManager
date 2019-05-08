@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace GasFlow
 {
@@ -18,16 +19,57 @@ namespace GasFlow
 		public float MomentumBounceLoss { get; set; }
 		public float MomentumBounceDiffusion { get; set; }
 
-		public bool EdgeIsBlocked { get; set; }
-
-		public void Update(int numTicks)
+		private bool _edgeIsBlocked;
+		public bool EdgeIsBlocked
 		{
-			foreach(Vector2Int pos in WriteBoard.GetTilePositions())
+			get { return _edgeIsBlocked; }
+			set
 			{
-				Tile tile = WriteBoard.GetTile(pos);
-				tile.Update(ReadBoard.GetTileSet(pos));
+				_edgeIsBlocked = value;
+				ReadBoard.SetEdgeBlocked(_edgeIsBlocked);
+				WriteBoard.SetEdgeBlocked(_edgeIsBlocked);
 			}
 		}
 
+		public Tile GetTile(int x, int y)
+		{
+			return ReadBoard.GetTile(x, y);
+		}
+
+		public Tile GetTile(Vector2Int pos)
+		{
+			return ReadBoard.GetTile(pos);
+		}
+
+		public void SetBlocked(Vector2Int pos, bool isBlocked)
+		{
+			ReadBoard.GetTile(pos).Blocked = isBlocked;
+			WriteBoard.GetTile(pos).Blocked = isBlocked;
+		}
+
+		public IEnumerable<Tile> GetTiles()
+		{
+			return ReadBoard.GetTiles();
+		}
+
+		public void Update(int numTicks)
+		{
+			for (int i = 0; i < numTicks; ++i)
+			{
+				foreach (Vector2Int pos in WriteBoard.GetTilePositions())
+				{
+					Tile tile = WriteBoard.GetTile(pos);
+					tile.Update(ReadBoard.GetTileSet(pos));
+				}
+				SwitchBoards();
+			}
+		}
+
+		private void SwitchBoards()
+		{
+			var temp = WriteBoard;
+			WriteBoard = ReadBoard;
+			ReadBoard = temp;
+		}
 	}
 }

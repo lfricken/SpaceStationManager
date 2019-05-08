@@ -7,7 +7,7 @@ namespace GasFlow
 		/// <summary>
 		/// 
 		/// </summary>
-		public bool Blocked { get; set; }
+		public bool Blocked { get; internal set; }
 
 		public float TotalPressure { get; set; }
 
@@ -16,11 +16,17 @@ namespace GasFlow
 			if (Blocked) { return; }
 
 			float average = 0;
-			foreach(var tile in readTiles)
+			int averageCount = 0;
+			foreach (var tile in readTiles)
 			{
+				if (tile.Blocked)
+				{
+					continue;
+				}
 				average += tile.TotalPressure;
+				averageCount += 1;
 			}
-			average /= 9f;
+			average /= averageCount;
 
 			TotalPressure = average;
 		}

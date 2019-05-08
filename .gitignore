@@ -1,5 +1,11 @@
 # This .gitignore file should be placed at the root of your Unity project directory
 
+#custom
+*Packages
+*bin
+*obj
+
+# Other
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
@@ -56,6 +62,3 @@ sysinfo.txt
 crashlytics-build.properties
 *.cache
 
-*Packages
-*bin
-*obj

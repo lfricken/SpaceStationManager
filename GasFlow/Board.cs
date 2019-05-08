@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace GasFlow
@@ -9,20 +10,11 @@ namespace GasFlow
 	/// <typeparam name="TileType"></typeparam>
 	public class Board<TileType> where TileType : Tile, new()
 	{
-		/// <summary>
-		/// 
-		/// </summary>
-		private List<List<Tile>> Tiles { get; set; }
+		public List<List<Tile>> Tiles { get; set; }
 
-		/// <summary>
-		/// 
-		/// </summary>
 		public Vector2Int Size { get; protected set; }
 
-		/// <summary>
-		/// 
-		/// </summary>
-		private Vector2Int TrueSize { get; set; }
+		public Vector2Int TrueSize { get; set; }
 
 
 		/// <summary>
@@ -37,10 +29,10 @@ namespace GasFlow
 			Debug.Assert(Size.y > 0);
 
 			Tiles = new List<List<Tile>>();
-			for (int x = 0; x < size.x; x++)
+			for (int x = 0; x < TrueSize.x; x++)
 			{
 				var column = new List<Tile>();
-				for (int y = 0; y < size.y; y++)
+				for (int y = 0; y < TrueSize.y; y++)
 				{
 					column.Add(new TileType());
 				}
@@ -48,30 +40,64 @@ namespace GasFlow
 			}
 		}
 
+		public void SetEdgeBlocked(bool edgeBlocked)
+		{
+			int leftX = 0;
+			int rightX = TrueSize.x - 1;
+			for (int y = 0; y < TrueSize.y; ++y)
+			{
+				Tile left = GetTrueTile(leftX, y);
+				Tile right = GetTrueTile(rightX, y);
+
+				left.Blocked = edgeBlocked;
+				right.Blocked = edgeBlocked;
+			}
+
+			int topY = TrueSize.y - 1;
+			int bottomY = 0;
+			for (int x = 1; x < (TrueSize.x - 1); ++x)
+			{
+				Tile top = GetTrueTile(x, topY);
+				Tile bottom = GetTrueTile(x, bottomY);
+
+				top.Blocked = edgeBlocked;
+				bottom.Blocked = edgeBlocked;
+			}
+		}
+
 		public List<Tile> GetTileSet(Vector2Int center)
 		{
-			int x = center.x;
-			int y = center.y;
+			int x = center.x + 1;
+			int y = center.y + 1;
 
 			List<Tile> list = new List<Tile>();
 
-			list.Add(GetTile(x - 1, y - 1));
-			list.Add(GetTile(x + 0, y - 1));
-			list.Add(GetTile(x + 1, y - 1));
+			list.Add(GetTrueTile(x - 1, y - 1));
+			list.Add(GetTrueTile(x + 0, y - 1));
+			list.Add(GetTrueTile(x + 1, y - 1));
 
-			list.Add(GetTile(x - 1, y + 0));
-			list.Add(GetTile(x + 0, y + 0));
-			list.Add(GetTile(x + 1, y + 0));
+			list.Add(GetTrueTile(x - 1, y + 0));
+			list.Add(GetTrueTile(x + 0, y + 0));
+			list.Add(GetTrueTile(x + 1, y + 0));
 
-			list.Add(GetTile(x - 1, y + 1));
-			list.Add(GetTile(x + 0, y + 1));
-			list.Add(GetTile(x + 1, y + 1));
+			list.Add(GetTrueTile(x - 1, y + 1));
+			list.Add(GetTrueTile(x + 0, y + 1));
+			list.Add(GetTrueTile(x + 1, y + 1));
 
 			return list;
 		}
 
+		public Tile GetTrueTile(int x, int y)
+		{
+			return Tiles[x][y];
+		}
+
 		public Tile GetTile(int x, int y)
 		{
+#if DEBUG
+			if (!((x >= 0) && (x <= Size.x - 1) && (y >= 0) && (y <= Size.y - 1)))
+				throw new ArgumentException($"Vector ({x},{y}) indexing {nameof(Board<TileType>)} of size ({Size.x},{Size.y})");
+#endif
 			return Tiles[x + 1][y + 1];
 		}
 
