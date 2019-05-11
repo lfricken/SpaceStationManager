@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace GasFlow
 {
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <typeparam name="TileType"></typeparam>
 	public class Board<TileType> where TileType : Tile, new()
 	{
 		public List<List<Tile>> Tiles { get; set; }
@@ -16,11 +12,6 @@ namespace GasFlow
 
 		public Vector2Int TrueSize { get; set; }
 
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="size"></param>
 		public Board(Vector2Int size)
 		{
 			Size = size;
@@ -40,28 +31,38 @@ namespace GasFlow
 			}
 		}
 
-		public void SetEdgeBlocked(bool edgeBlocked)
+		public void SetEdgesBlocked(bool edgeBlocked)
+		{
+			foreach(Tile tile in GetEdgeTiles())
+			{
+				tile.Blocked = edgeBlocked;
+			}
+		}
+
+		public void ClearEdgeTiles()
+		{
+			foreach (Tile tile in GetEdgeTiles())
+			{
+				tile.TotalPressure = 0f;
+			}
+		}
+
+		private IEnumerable<Tile> GetEdgeTiles()
 		{
 			int leftX = 0;
 			int rightX = TrueSize.x - 1;
 			for (int y = 0; y < TrueSize.y; ++y)
 			{
-				Tile left = GetTrueTile(leftX, y);
-				Tile right = GetTrueTile(rightX, y);
-
-				left.Blocked = edgeBlocked;
-				right.Blocked = edgeBlocked;
+				yield return GetTrueTile(leftX, y);
+				yield return GetTrueTile(rightX, y);
 			}
 
 			int topY = TrueSize.y - 1;
 			int bottomY = 0;
 			for (int x = 1; x < (TrueSize.x - 1); ++x)
 			{
-				Tile top = GetTrueTile(x, topY);
-				Tile bottom = GetTrueTile(x, bottomY);
-
-				top.Blocked = edgeBlocked;
-				bottom.Blocked = edgeBlocked;
+				yield return GetTrueTile(x, topY);
+				yield return GetTrueTile(x, bottomY);
 			}
 		}
 

@@ -4,9 +4,6 @@ namespace GasFlow
 {
 	public class Tile
 	{
-		/// <summary>
-		/// 
-		/// </summary>
 		public bool Blocked { get; internal set; }
 
 		public float TotalPressure { get; set; }

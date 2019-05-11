@@ -26,8 +26,8 @@ namespace GasFlow
 			set
 			{
 				_edgeIsBlocked = value;
-				ReadBoard.SetEdgeBlocked(_edgeIsBlocked);
-				WriteBoard.SetEdgeBlocked(_edgeIsBlocked);
+				ReadBoard.SetEdgesBlocked(_edgeIsBlocked);
+				WriteBoard.SetEdgesBlocked(_edgeIsBlocked);
 			}
 		}
 
@@ -62,6 +62,11 @@ namespace GasFlow
 					tile.Update(ReadBoard.GetTileSet(pos));
 				}
 				SwitchBoards();
+			}
+
+			if(EdgeIsBlocked)
+			{
+				WriteBoard.ClearEdgeTiles();
 			}
 		}
 
