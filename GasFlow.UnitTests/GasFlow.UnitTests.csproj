@@ -45,6 +45,9 @@
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.1.3.2\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
     </Reference>
+    <Reference Include="nunit.framework">
+      <HintPath>D:\programs\Unity\2019.1.1f1\Editor\Data\UnityExtensions\Unity\TestRunner\net35\unity-custom\nunit.framework.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="UnityEngine.CoreModule">
@@ -54,6 +57,7 @@
   <ItemGroup>
     <Compile Include="GasWorldTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="GasWorldPerformance.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -61,13 +61,14 @@ namespace GasFlow
 					Tile tile = WriteBoard.GetTile(pos);
 					tile.Update(ReadBoard.GetTileSet(pos));
 				}
-				SwitchBoards();
 			}
 
 			if(EdgeIsBlocked)
 			{
 				WriteBoard.ClearEdgeTiles();
 			}
+
+			SwitchBoards();
 		}
 
 		private void SwitchBoards()

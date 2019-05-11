@@ -97,7 +97,7 @@ namespace GasFlow
 		{
 #if DEBUG
 			if (!((x >= 0) && (x <= Size.x - 1) && (y >= 0) && (y <= Size.y - 1)))
-				throw new ArgumentException($"Vector ({x},{y}) indexing {nameof(Board<TileType>)} of size ({Size.x},{Size.y})");
+				throw new ArgumentException($"{nameof(Vector2Int)} ({x},{y}) indexing {nameof(Board<TileType>)} of size ({Size.x},{Size.y})");
 #endif
 			return Tiles[x + 1][y + 1];
 		}
