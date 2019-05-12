@@ -8,6 +8,19 @@ namespace GasFlow
 {
 	public class GasWorld<TileType> where TileType : Tile, new()
 	{
+		class BoardSet
+		{
+			public Board<TileType> ReadBoard { get; set; }
+			public Board<TileType> WriteBoard { get; set; }
+
+			public void SwitchBoards()
+			{
+				var temp = WriteBoard;
+				WriteBoard = ReadBoard;
+				ReadBoard = temp;
+			}
+		}
+
 		BoardSet boards;
 		int maxThreads;
 
@@ -24,6 +37,7 @@ namespace GasFlow
 		public float MomentumBounceLoss { get; set; }
 		public float MomentumBounceDiffusion { get; set; }
 
+		#region Modify
 		private bool _edgeIsBlocked;
 		public bool EdgeIsBlocked
 		{
@@ -56,7 +70,9 @@ namespace GasFlow
 		{
 			return boards.ReadBoard.GetTiles();
 		}
+		#endregion
 
+		#region Multithreading
 		public async Task Update(int numTicks)
 		{
 			var tasks = StartThreads();
@@ -101,19 +117,6 @@ namespace GasFlow
 			return t;
 		}
 
-		class BoardSet
-		{
-			public Board<TileType> ReadBoard { get; set; }
-			public Board<TileType> WriteBoard { get; set; }
-
-			public void SwitchBoards()
-			{
-				var temp = WriteBoard;
-				WriteBoard = ReadBoard;
-				ReadBoard = temp;
-			}
-		}
-
 		class Worker
 		{
 			public Worker(IEnumerable<Vector2Int> positions, BoardSet boards)
@@ -136,5 +139,6 @@ namespace GasFlow
 				}
 			}
 		}
+		#endregion
 	}
 }
