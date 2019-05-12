@@ -25,7 +25,7 @@ namespace GasFlow.UnitTests
 
 			Assert.AreEqual(0, Environment.ProcessorCount);
 
-			Assert.That(Time(world, ticks), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(0.16)));
+			Assert.That(Time(world, ticks), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(0f)));
 		}
 
 		private TimeSpan Time(GasWorld<Tile> world, int ticks)
