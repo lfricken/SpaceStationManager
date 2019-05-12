@@ -12,6 +12,7 @@ namespace GasFlow
 
 		public GasWorld(Vector2Int size)
 		{
+			boards = new BoardSet();
 			boards.ReadBoard = new Board<TileType>(size);
 			boards.WriteBoard = new Board<TileType>(size);
 		}
@@ -56,42 +57,46 @@ namespace GasFlow
 
 		public async Task Update(int numTicks)
 		{
-			int size = boards.WriteBoard.Size.x * boards.WriteBoard.Size.y;
-
-
-			int increments = size / Environment.ProcessorCount;
-			CountdownEvent threadCounter = new CountdownEvent(1);
-
-			int counter = 0;
-			List<Vector2Int> positions = new List<Vector2Int>();
-			foreach (Vector2Int pos in boards.WriteBoard.GetTilePositions())
-			{
-				if(counter == increments)
-				{
-					Worker worker = new Worker(positions, boards, threadCounter);
-					ThreadPool.QueueUserWorkItem(StartThread, worker);
-					counter = 0;
-					positions = new List<Vector2Int>();
-				}
-				++counter;
-				positions.Add(pos);
-			}
-
+			var tasks = StartThreads();
+			await Task.WhenAll(tasks);
 			if (EdgeIsBlocked)
 			{
 				boards.WriteBoard.ClearEdgeTiles();
 			}
 
 			boards.SwitchBoards();
-			threadCounter.Signal();
-			return threadCounter;
 		}
 
-
-		void StartThread(object data)
+		public List<Task> StartThreads()
 		{
-			Worker w = (Worker)data;
-			w.Work();
+			List<Task> tasks = new List<Task>();
+			int size = boards.WriteBoard.Size.x * boards.WriteBoard.Size.y;
+			int workPerThread = size / Environment.ProcessorCount;
+
+			List<Vector2Int> positions = new List<Vector2Int>();
+			foreach (Vector2Int pos in boards.WriteBoard.GetTilePositions())
+			{
+				if (positions.Count == workPerThread)
+				{
+					tasks.Add(StartThread(positions));
+					positions = new List<Vector2Int>();
+				}
+				positions.Add(pos);
+			}
+			if (positions.Count > 0)
+			{
+				tasks.Add(StartThread(positions));
+			}
+
+			return tasks;
+		}
+
+		Task StartThread(IList<Vector2Int> positions)
+		{
+			Worker worker = new Worker(positions, boards);
+			Task t = new Task(() => worker.Work());
+			t.Start();
+			return t;
 		}
 
 		class BoardSet
@@ -109,13 +114,10 @@ namespace GasFlow
 
 		class Worker
 		{
-			public Worker(IEnumerable<Vector2Int> positions, BoardSet boards, CountdownEvent threadCounter)
+			public Worker(IEnumerable<Vector2Int> positions, BoardSet boards)
 			{
 				Positions = positions;
 				Boards = boards;
-				ThreadCounter = threadCounter;
-
-				ThreadCounter.AddCount(1);
 			}
 
 			IEnumerable<Vector2Int> Positions { get; set; }
@@ -127,10 +129,9 @@ namespace GasFlow
 			{
 				foreach (Vector2Int pos in Positions)
 				{
-					Tile tile = WriteBoard.GetTile(pos);
-					tile.Update(ReadBoard.GetTileSet(pos));
+					Tile tile = Boards.WriteBoard.GetTile(pos);
+					tile.Update(Boards.ReadBoard.GetTileSet(pos));
 				}
-				ThreadCounter.Signal();
 			}
 		}
 	}

@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using UnityEngine;
 using Assert = NUnit.Framework.Assert;
 
@@ -23,18 +24,18 @@ namespace GasFlow.UnitTests
 			Tile center = world.GetTile(new Vector2Int(size.x / 2, size.y / 2));
 			center.TotalPressure = 900;
 
-			Assert.AreEqual(0, Environment.ProcessorCount);
-
-			Assert.That(Time(world, ticks), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(0f)));
+			Assert.That(TimeAsync(world, ticks), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(0f)));
 		}
 
-		private TimeSpan Time(GasWorld<Tile> world, int ticks)
+		private TimeSpan TimeAsync(GasWorld<Tile> world, int ticks)
 		{
 			var timer = Stopwatch.StartNew();
+			Task t = null;
 			for (int i = 0; i < ticks; ++i)
 			{
-				world.Update(1);
+				t = world.Update(1);
 			}
+			t.Wait();
 			timer.Stop();
 			return timer.Elapsed;
 		}

@@ -13,8 +13,8 @@ namespace TestGround
 			data = _data;
 		}
 
-		int range;
-		Program data;
+		readonly int range;
+		readonly Program data;
 
 		public void Work()
 		{
