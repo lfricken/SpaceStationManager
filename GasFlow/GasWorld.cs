@@ -13,7 +13,7 @@ namespace GasFlow
 
 		public GasWorld(Vector2Int size)
 		{
-			maxThreads = Environment.ProcessorCount * 4;
+			maxThreads = Environment.ProcessorCount * 8;
 			boards = new BoardSet();
 			boards.ReadBoard = new Board<TileType>(size);
 			boards.WriteBoard = new Board<TileType>(size);
