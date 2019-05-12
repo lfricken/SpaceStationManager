@@ -9,9 +9,11 @@ namespace GasFlow
 	public class GasWorld<TileType> where TileType : Tile, new()
 	{
 		BoardSet boards;
+		int maxThreads;
 
 		public GasWorld(Vector2Int size)
 		{
+			maxThreads = Environment.ProcessorCount * 32;
 			boards = new BoardSet();
 			boards.ReadBoard = new Board<TileType>(size);
 			boards.WriteBoard = new Board<TileType>(size);
@@ -67,11 +69,11 @@ namespace GasFlow
 			boards.SwitchBoards();
 		}
 
-		public List<Task> StartThreads()
+		public IList<Task> StartThreads()
 		{
-			List<Task> tasks = new List<Task>();
+			IList<Task> tasks = new List<Task>();
 			int size = boards.WriteBoard.Size.x * boards.WriteBoard.Size.y;
-			int workPerThread = size / Environment.ProcessorCount;
+			int workPerThread = size / maxThreads;
 
 			List<Vector2Int> positions = new List<Vector2Int>();
 			foreach (Vector2Int pos in boards.WriteBoard.GetTilePositions())
