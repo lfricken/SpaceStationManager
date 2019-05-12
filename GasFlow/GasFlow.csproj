@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Board.cs" />
     <Compile Include="GasTile.cs" />
+    <Compile Include="GasWorldSync.cs" />
     <Compile Include="GasWorld.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

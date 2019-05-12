@@ -39,5 +39,32 @@ namespace GasFlow.UnitTests
 			timer.Stop();
 			return timer.Elapsed;
 		}
+
+		[TestMethod]
+		public void SyncPerformance_500x500()
+		{
+
+			int ticks = 1;
+			Vector2Int size = new Vector2Int(500, 500);
+			GasWorldSync<Tile> world = new GasWorldSync<Tile>(size);
+
+			world.SetBlocked(new Vector2Int(size.x / 5, size.y / 5), true);
+
+			Tile center = world.GetTile(new Vector2Int(size.x / 2, size.y / 2));
+			center.TotalPressure = 900;
+
+			Assert.That(Time(world, ticks), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(0f)));
+		}
+
+		private TimeSpan Time(GasWorldSync<Tile> world, int ticks)
+		{
+			var timer = Stopwatch.StartNew();
+			for (int i = 0; i < ticks; ++i)
+			{
+				world.Update(1);
+			}
+			timer.Stop();
+			return timer.Elapsed;
+		}
 	}
 }
