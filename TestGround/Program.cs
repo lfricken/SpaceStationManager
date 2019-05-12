@@ -1,28 +1,25 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace TestGround
 {
 	class Worker
 	{
-		public Worker(int _range, Program _data, CountdownEvent _threadCounter)
+		public Worker(int _range, Program _data)
 		{
-			threadCounter = _threadCounter;
 			range = _range;
 			data = _data;
-
-			threadCounter.AddCount(1);
 		}
 
 		int range;
 		Program data;
-		CountdownEvent threadCounter;
 
 		public void Work()
 		{
 			Thread.Sleep(1000);
-			Console.WriteLine($"Hello from {range}");
-			threadCounter.Signal();
+			Console.WriteLine($"Do Work {range}");
 		}
 	}
 
@@ -30,35 +27,42 @@ namespace TestGround
 	{
 		static void Main(string[] args)
 		{
+			Console.WriteLine("Start");
 			var p = new Program();
-			var threads = p.StartWork(10);
+			var threads = p.StartWork();
 
-			Console.WriteLine("Middle.");
-
+			Console.WriteLine("Do other stuff");
 			threads.Wait();
-
-			Console.WriteLine("Exit.");
+			Console.WriteLine("Exit");
 			Console.ReadLine();
 		}
 
-		public CountdownEvent StartWork(int work)
+		public async Task StartWork()
 		{
-			CountdownEvent threadCounter = new CountdownEvent(1);
-			Console.WriteLine("Start.");
-			for (int i = 0; i < work; ++i)
-			{
-				Worker worker = new Worker(i, this, threadCounter);
-				ThreadPool.QueueUserWorkItem(StartThread, worker);
-			}
+			Console.WriteLine("Start Work");
 
-			threadCounter.Signal();
-			return threadCounter;
+			var tasks = StartThreads();
+			await Task.WhenAll(tasks);
+
+			Console.WriteLine("Finish Work");
 		}
 
-		public void StartThread(object data)
+		public List<Task> StartThreads()
 		{
-			Worker w = (Worker)data;
-			w.Work();
+			List<Task> tasks = new List<Task>();
+			for (int i = 0; i < 8; ++i)
+			{
+				Worker worker = new Worker(i, this);
+				Task t = new Task(() => StartThread(worker));
+				t.Start();
+				tasks.Add(t);
+			}
+			return tasks;
+		}
+
+		public static void StartThread(Worker worker)
+		{
+			worker.Work();
 		}
 
 	}
