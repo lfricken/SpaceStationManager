@@ -8,21 +8,21 @@ namespace GasFlow.UnitTests
 	public class GasWorldTest
 	{
 		[TestMethod]
-		public async Task Wall_Unblocked_GasSpreadsOut()
+		public void Wall_Unblocked_GasSpreadsOut()
 		{
 			GasWorld<Tile> world = new GasWorld<Tile>(new Vector2Int(3, 3));
 			Tile center;
 
 			center = world.GetTile(new Vector2Int(1, 1));
 			center.TotalPressure = 36f;
-			await world.Update(1);
+			world.UpdateAsync(1).Wait();
 
 			center = world.GetTile(new Vector2Int(1, 1));
 			Assert.AreEqual(36f / 9f, center.TotalPressure);
 		}
 
 		[TestMethod]
-		public async Task Wall_Blocked_RetainsGas()
+		public void Wall_Blocked_RetainsGas()
 		{
 			GasWorld<Tile> world = new GasWorld<Tile>(new Vector2Int(1, 1));
 			world.EdgeIsBlocked = true;
@@ -30,7 +30,7 @@ namespace GasFlow.UnitTests
 
 			center = world.GetTile(new Vector2Int(0, 0));
 			center.TotalPressure = 90f;
-			await world.Update(1);
+			world.UpdateAsync(1).Wait();
 
 			center = world.GetTile(new Vector2Int(0, 0));
 			Assert.AreEqual(90f, center.TotalPressure);
@@ -49,7 +49,7 @@ namespace GasFlow.UnitTests
 		}
 
 		[TestMethod]
-		public async Task Edge_Blocked_BlockGas()
+		public void Edge_Blocked_BlockGas()
 		{
 			GasWorld<Tile> world = new GasWorld<Tile>(new Vector2Int(1, 1));
 			world.EdgeIsBlocked = true;
@@ -58,14 +58,14 @@ namespace GasFlow.UnitTests
 
 			center = world.GetTile(new Vector2Int(0, 0));
 			center.TotalPressure = 90f;
-			await world.Update(1);
+			world.UpdateAsync(1).Wait();
 
 			center = world.GetTile(new Vector2Int(0, 0));
 			Assert.AreEqual(90f, center.TotalPressure);
 		}
 
 		[TestMethod]
-		public async Task Edge_Unblocked_DeleteGasAsync()
+		public void Edge_Unblocked_DeleteGasAsync()
 		{
 			Tile tile;
 			float pressure = 81f;
@@ -75,12 +75,12 @@ namespace GasFlow.UnitTests
 			tile = world.GetTile(new Vector2Int(0, 0));
 			tile.TotalPressure = pressure;
 
-			await world.Update(1);
+			world.UpdateAsync(1).Wait();
 			tile = world.GetTile(new Vector2Int(0, 0));
 			pressure /= 9f;
 			Assert.AreEqual(pressure, tile.TotalPressure);
 
-			await world.Update(1);
+			world.UpdateAsync(1).Wait();
 			tile = world.GetTile(new Vector2Int(0, 0));
 			pressure /= 9f;
 			Assert.AreEqual(pressure, tile.TotalPressure);

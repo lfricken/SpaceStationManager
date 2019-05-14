@@ -37,7 +37,7 @@ namespace GasFlow
 		public float MomentumBounceLoss { get; set; }
 		public float MomentumBounceDiffusion { get; set; }
 
-		#region Modify
+		#region Modify 
 		private bool _edgeIsBlocked;
 		public bool EdgeIsBlocked
 		{
@@ -72,11 +72,17 @@ namespace GasFlow
 		}
 		#endregion
 
-		#region Multithreading
-		public async Task Update(int numTicks)
+		public void Update(int numTicks)
 		{
-			var tasks = StartThreads();
-			await Task.WhenAll(tasks);
+			for (int i = 0; i < numTicks; ++i)
+			{
+				foreach (Vector2Int pos in boards.WriteBoard.GetTilePositions())
+				{
+					Tile tile = boards.WriteBoard.GetTile(pos);
+					tile.Update(boards.ReadBoard.GetTileSet(pos));
+				}
+			}
+
 			if (EdgeIsBlocked)
 			{
 				boards.WriteBoard.ClearEdgeTiles();
@@ -85,11 +91,28 @@ namespace GasFlow
 			boards.SwitchBoards();
 		}
 
+		#region Multithreading
+		public async Task UpdateAsync(int numTicks)
+		{
+			while (numTicks > 0)
+			{
+				--numTicks;
+				var tasks = StartThreads();
+				await Task.WhenAll(tasks);
+				if (EdgeIsBlocked)
+				{
+					boards.WriteBoard.ClearEdgeTiles();
+				}
+
+				boards.SwitchBoards();
+			}
+		}
+
 		public IList<Task> StartThreads()
 		{
 			IList<Task> tasks = new List<Task>();
 			int size = boards.WriteBoard.Size.x * boards.WriteBoard.Size.y;
-			int workPerThread = size / maxThreads;
+			int workPerThread = Math.Min(250, size / maxThreads);
 
 			List<Vector2Int> positions = new List<Vector2Int>();
 			foreach (Vector2Int pos in boards.WriteBoard.GetTilePositions())

@@ -1,69 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace TestGround
 {
-	class Worker
-	{
-		public Worker(int _range, Program _data)
-		{
-			range = _range;
-			data = _data;
-		}
-
-		readonly int range;
-		readonly Program data;
-
-		public void Work()
-		{
-			Thread.Sleep(1000);
-			Console.WriteLine($"Do Work {range}");
-		}
-	}
-
 	class Program
 	{
+		public class Cpp
+		{
+			[DllImport("FastGas.dll", EntryPoint = "add", ExactSpelling = false, CallingConvention = CallingConvention.Cdecl)]
+			public static extern int add(int a, int b);
+		}
+
 		static void Main(string[] args)
 		{
-			Console.WriteLine("Start");
-			var p = new Program();
-			var threads = p.StartWork();
+			Console.WriteLine("a ");
+			Console.WriteLine(Cpp.add(3,5));
 
-			Console.WriteLine("Do other stuff");
-			threads.Wait();
-			Console.WriteLine("Exit");
-			Console.ReadLine();
+			Console.ReadKey();
 		}
-
-		public async Task StartWork()
-		{
-			Console.WriteLine("Start Work");
-
-			var tasks = StartThreads();
-			await Task.WhenAll(tasks);
-
-			Console.WriteLine("Finish Work");
-		}
-
-		public List<Task> StartThreads()
-		{
-			List<Task> tasks = new List<Task>();
-			for (int i = 0; i < 8; ++i)
-			{
-				Worker worker = new Worker(i, this);
-				Task t = new Task(() => StartThread(worker));
-				t.Start();
-				tasks.Add(t);
-			}
-			return tasks;
-		}
-
-		public static void StartThread(Worker worker)
-		{
-			worker.Work();
-		}
-
 	}
 }

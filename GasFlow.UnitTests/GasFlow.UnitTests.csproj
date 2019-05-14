@@ -58,7 +58,7 @@
     <Compile Include="GasWorldTest.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="GasWorldPerformance.cs" />
+    <Compile Include="GasWorldThreadPerformance.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
