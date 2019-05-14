@@ -17,7 +17,6 @@ ManagedHelloWorld::~ManagedHelloWorld()
 }
 int ManagedHelloWorld::SayThis(int i)
 {
-	impl->SayThis(i);
-	return 33;
+	return impl->SayThis(i);
 }
 

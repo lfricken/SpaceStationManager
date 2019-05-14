@@ -13,7 +13,7 @@ HelloWorld::~HelloWorld()
 {
 
 }
-void HelloWorld::SayThis(int i)
+int HelloWorld::SayThis(int i)
 {
-	std::cout << "Hello World Says" << i;
+	return i;
 }

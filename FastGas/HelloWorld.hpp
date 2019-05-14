@@ -13,5 +13,5 @@ public:
 	HelloWorld();
 	~HelloWorld();
 
-	void SayThis(int i);
+	int SayThis(int i);
 };
