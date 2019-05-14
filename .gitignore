@@ -4,6 +4,8 @@
 *Packages
 *bin
 *obj
+Release/
+Debug/
 
 # Other
 /[Ll]ibrary/

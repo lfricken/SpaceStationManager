@@ -1,8 +1,1 @@
-﻿  cppcliwrapper.cpp
-  HelloWorld.cpp
-  Generating Code...
-  .NETFramework,Version=v4.0.AssemblyAttributes.cpp
-  cppcliwrapper.obj : /DEBUG:FASTLINK is not supported when managed code is present; restarting link with /DEBUG:FULL
-  cppcliwrapper.obj : MSIL module encountered; incremental linking is disabled for MSIL; performing full link
-     Creating library C:\dev\SpaceStationManager\Debug\FastGas.lib and object C:\dev\SpaceStationManager\Debug\FastGas.exp
-  FastGas.vcxproj -> C:\dev\SpaceStationManager\Debug\FastGas.dll
+﻿

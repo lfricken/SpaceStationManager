@@ -6,7 +6,7 @@
 
 extern "C" FASTGAS_API int add(int a, int b);
 
-/**
+
 class FASTGAS_API HelloWorld
 {
 public:
@@ -15,4 +15,3 @@ public:
 
 	void SayThis(int i);
 };
-*/
