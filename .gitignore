@@ -1,9 +1,9 @@
 # This .gitignore file should be placed at the root of your Unity project directory
 
 #custom
-*Packages
-*bin
-*obj
+Packages/
+bin/
+obj/
 Release/
 Debug/
 
