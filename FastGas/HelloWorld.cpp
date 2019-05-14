@@ -15,5 +15,5 @@ HelloWorld::~HelloWorld()
 }
 int HelloWorld::SayThis(int i)
 {
-	return i;
+	return i*2;
 }

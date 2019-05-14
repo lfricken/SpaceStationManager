@@ -16,6 +16,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GasFlow.UnitTests", "GasFlo
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestGround", "TestGround\TestGround.csproj", "{E7633476-DD14-4F3D-AEFB-3CF34CA54E76}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3CE3BB89-9A48-4333-BEB1-1C6E1E21BD8B} = {3CE3BB89-9A48-4333-BEB1-1C6E1E21BD8B}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FastGas", "FastGas\FastGas.vcxproj", "{3CE3BB89-9A48-4333-BEB1-1C6E1E21BD8B}"
 EndProject

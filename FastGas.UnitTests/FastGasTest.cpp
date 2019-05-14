@@ -1,5 +1,4 @@
-#include "stdafx.h"
-#include "CppUnitTest.h"
+#include <CppUnitTest.h>
 #include "HelloWorld.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;

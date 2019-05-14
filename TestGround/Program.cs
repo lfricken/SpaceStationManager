@@ -17,7 +17,7 @@ namespace TestGround
 
 			Console.WriteLine("a ");
 			Console.WriteLine(Cpp.add(3, 5));
-			Console.WriteLine(t.SayThis(4));
+			Console.WriteLine(t.SayThis(24));
 
 			Console.ReadKey();
 		}
