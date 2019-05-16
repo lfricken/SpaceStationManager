@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\GameManager.cs" />
+    <Compile Include="Assets\Scripts\GpuComputer.cs" />
     <None Include="Assets\Resources\move.compute" />
     <None Include="Assets\Resources\pressure.compute" />
     <Reference Include="Unity.Timeline.Editor">
