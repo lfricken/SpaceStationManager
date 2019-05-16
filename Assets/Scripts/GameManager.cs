@@ -4,51 +4,37 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-	//ComputeShader shader;
-	//RenderTexture read;
-
-	GameObject mainCanvas;
-	UnityEngine.UI.Image outputImage;
-	RenderTexture outputTexture;
-
 	Texture2D texture;
-
-	//Renderer rend;
+	RenderTexture outputTexture;
 
 	Vector3Int resolution;
 
-	private void Awake()
-	{
-
-	}
+	ComputeShader shader;
+	int shaderHandle;
 
 	void initCanvas()
 	{
-		resolution = new Vector3Int(4, 4, 32);
+		resolution = new Vector3Int(256, 256, 24);
 
 		outputTexture = new RenderTexture(resolution.x, resolution.y, resolution.z);
 		outputTexture.enableRandomWrite = true;
 		outputTexture.Create();
 		outputTexture.filterMode = FilterMode.Point;
 
-		mainCanvas = GameObject.Find("canvas");
 
-
-		texture = new Texture2D(outputTexture.width, outputTexture.height);
+		texture = new Texture2D(resolution.y, resolution.y);
 		texture.filterMode = FilterMode.Point;
 
-		outputImage = GameObject.Find("canvas/image").GetComponent<UnityEngine.UI.Image>();
-		outputImage.material.mainTexture = texture;
-
+		var outputImage = GameObject.Find("canvas/image").GetComponent<UnityEngine.UI.Image>();
+		outputImage.material.mainTexture = outputTexture;
 
 
 		Color color = Color.red;
 
-		RenderTexture.active = outputTexture;
-		for (int x = 0; x < outputTexture.width; x++)
-			for (int y = 0; y < outputTexture.height; y++)
+		for (int x = 0; x < resolution.x; x++)
+			for (int y = 0; y < resolution.y; y++)
 			{
-				if (x % 2 == 0)
+				if (x % 4 == 0)
 				{
 					color.r = 0;
 					color.g = 1;
@@ -61,19 +47,25 @@ public class GameManager : MonoBehaviour
 				texture.SetPixel(x, y, color);
 			}
 		texture.Apply();
+
+		RenderTexture.active = outputTexture;
+		Graphics.Blit(texture, outputTexture);
 		RenderTexture.active = null;
+
+		shader = Resources.Load<ComputeShader>("blur");            // here we link computer shader code file to the shader class
+		shaderHandle = shader.FindKernel(nameof(shaderHandle));
+		shader.SetTexture(shaderHandle, nameof(outputTexture), outputTexture);
+
+		shader.Dispatch(shaderHandle, resolution.x / 8, resolution.y / 8, 1);
 	}
 
-	// Start is called before the first frame update
 	void Start()
 	{
 		initCanvas();
-
 	}
 
-	// Update is called once per frame
 	void Update()
 	{
-
+		shader.Dispatch(shaderHandle, resolution.x / 8, resolution.y / 8, 1);
 	}
 }
