@@ -1,20 +1,45 @@
-﻿using Assets.Scripts;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-	GpuComputer gasMover;
+	Texture2D texture;
+
+	Vector3Int resolution;
+
+	//RenderTexture pressureTexture;
+	//ComputeShader pressureShader;
+	//int pressureHandle;
+
+	RenderTexture moveTexture;
+	ComputeShader moveShader;
+	int moveHandle;
 
 	void initCanvas()
 	{
-		Vector2Int res = new Vector2Int(64, 64);
-		Texture2D texture = new Texture2D(res.x, res.y);
+		resolution = new Vector3Int(64, 64, 24);
+
+		moveTexture = new RenderTexture(resolution.x, resolution.y, resolution.z);
+		moveTexture.enableRandomWrite = true;
+		moveTexture.Create();
+		moveTexture.filterMode = FilterMode.Point;
+
+		//inputTexture = new RenderTexture(resolution.x, resolution.y, resolution.z);
+		//inputTexture.enableRandomWrite = true;
+		//inputTexture.Create();
+		//inputTexture.filterMode = FilterMode.Point;
+
+
+		texture = new Texture2D(resolution.y, resolution.y);
 		texture.filterMode = FilterMode.Point;
 
-		for (int x = 0; x < res.x; x++)
-			for (int y = 0; y < res.y; y++)
+		var outputImage = GameObject.Find("canvas/image").GetComponent<UnityEngine.UI.Image>();
+		outputImage.material.mainTexture = moveTexture;
+
+		
+		for (int x = 0; x < resolution.x; x++)
+			for (int y = 0; y < resolution.y; y++)
 			{
 				texture.SetPixel(x, y, Color.black);
 			}
@@ -25,12 +50,14 @@ public class GameManager : MonoBehaviour
 		texture.SetPixel(53, 50, Color.clear);
 		texture.Apply();
 
-		gasMover = new GpuComputer("move", texture);
-		gasMover.output = gasMover.input;
+		RenderTexture.active = moveTexture;
+		Graphics.Blit(texture, moveTexture);
+		RenderTexture.active = null;
 
-		var outputImage = GameObject.Find("canvas/image").GetComponent<UnityEngine.UI.Image>();
-		outputImage.material.mainTexture = gasMover.output;
+		moveShader = Resources.Load<ComputeShader>("move");
+		moveHandle = moveShader.FindKernel(nameof(moveHandle));
 
+		moveShader.SetTexture(moveHandle, nameof(moveTexture), moveTexture);
 	}
 
 	void Start()
@@ -49,7 +76,7 @@ public class GameManager : MonoBehaviour
 		for (int i = 0; i < 10; i++)
 		{
 			yield return new WaitForSeconds(0.70f);
-			gasMover.Tick();
+			moveShader.Dispatch(moveHandle, resolution.x / 8, resolution.y / 8, 1);
 		}
 	}
 }
