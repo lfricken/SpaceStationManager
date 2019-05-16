@@ -1,20 +1,19 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel shaderHandle
+#pragma kernel blurHandle
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture2D<float4> inputTexture;
-RWTexture2D<float4> outputTexture;
+RWTexture2D<float4> pressureTexture;
 
 float2 getContribution(float2 pos, float2 offset)
 {
-	return float2(inputTexture[pos + offset].r, inputTexture[pos + offset].a);
+	return float2(pressureTexture[pos + offset].g, pressureTexture[pos + offset].a);
 }
 
 [numthreads(8, 8, 1)]
 void shaderHandle(uint3 id : SV_DispatchThreadID)
 {
-	float myMult = inputTexture[id.xy].a;
+	float myMult = pressureTexture[id.xy].a;
 	float2 pos = id.xy;
 
 	float2 sum = float2(0, 0);
@@ -33,7 +32,7 @@ void shaderHandle(uint3 id : SV_DispatchThreadID)
 
 	sum.x /= sum.y;
 
-	outputTexture[id.xy] = float4(sum.x, 0, 0, 1 * myMult);
+	pressureTexture[id.xy] = float4(0, sum.x * myMult, 0, 1 * myMult);
 }
 
 

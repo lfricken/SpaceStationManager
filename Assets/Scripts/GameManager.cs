@@ -5,75 +5,78 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
 	Texture2D texture;
-	RenderTexture outputTexture;
-	RenderTexture inputTexture;
 
 	Vector3Int resolution;
 
-	ComputeShader shader;
-	int shaderHandle;
+	//RenderTexture pressureTexture;
+	//ComputeShader pressureShader;
+	//int pressureHandle;
+
+	RenderTexture moveTexture;
+	ComputeShader moveShader;
+	int moveHandle;
 
 	void initCanvas()
 	{
-		resolution = new Vector3Int(8, 8, 24);
+		resolution = new Vector3Int(64, 64, 24);
 
-		outputTexture = new RenderTexture(resolution.x, resolution.y, resolution.z);
-		outputTexture.enableRandomWrite = true;
-		outputTexture.Create();
-		outputTexture.filterMode = FilterMode.Point;
+		moveTexture = new RenderTexture(resolution.x, resolution.y, resolution.z);
+		moveTexture.enableRandomWrite = true;
+		moveTexture.Create();
+		moveTexture.filterMode = FilterMode.Point;
 
-		inputTexture = new RenderTexture(resolution.x, resolution.y, resolution.z);
-		inputTexture.enableRandomWrite = true;
-		inputTexture.Create();
-		inputTexture.filterMode = FilterMode.Point;
+		//inputTexture = new RenderTexture(resolution.x, resolution.y, resolution.z);
+		//inputTexture.enableRandomWrite = true;
+		//inputTexture.Create();
+		//inputTexture.filterMode = FilterMode.Point;
 
 
 		texture = new Texture2D(resolution.y, resolution.y);
 		texture.filterMode = FilterMode.Point;
 
 		var outputImage = GameObject.Find("canvas/image").GetComponent<UnityEngine.UI.Image>();
-		outputImage.material.mainTexture = outputTexture;
+		outputImage.material.mainTexture = moveTexture;
 
-
-		Color color = Color.black;
-
+		
 		for (int x = 0; x < resolution.x; x++)
 			for (int y = 0; y < resolution.y; y++)
 			{
-				if (x % 4 == 0)
-				{
-					color.r = 1;
-				}
-				else
-				{
-					color.r = 0;
-				}
-				texture.SetPixel(x, y, color);
+				texture.SetPixel(x, y, Color.black);
 			}
+		texture.SetPixel(52, 51, Color.green);
+
+		texture.SetPixel(51, 50, Color.clear);
+		texture.SetPixel(52, 50, Color.clear);
+		texture.SetPixel(53, 50, Color.clear);
 		texture.Apply();
 
-		RenderTexture.active = outputTexture;
-		Graphics.Blit(texture, outputTexture);
+		RenderTexture.active = moveTexture;
+		Graphics.Blit(texture, moveTexture);
 		RenderTexture.active = null;
 
-		RenderTexture.active = inputTexture;
-		Graphics.Blit(texture, inputTexture);
-		RenderTexture.active = null;
+		moveShader = Resources.Load<ComputeShader>("move");
+		moveHandle = moveShader.FindKernel(nameof(moveHandle));
 
-		shader = Resources.Load<ComputeShader>("blur");            // here we link computer shader code file to the shader class
-		shaderHandle = shader.FindKernel(nameof(shaderHandle));
-
+		moveShader.SetTexture(moveHandle, nameof(moveTexture), moveTexture);
 	}
 
 	void Start()
 	{
 		initCanvas();
+		StartCoroutine(Example());
 	}
 
 	void Update()
 	{
-		shader.SetTexture(shaderHandle, nameof(outputTexture), outputTexture);
-		shader.SetTexture(shaderHandle, nameof(inputTexture), inputTexture);
-		shader.Dispatch(shaderHandle, resolution.x / 8, resolution.y / 8, 1);
+
+	}
+
+	IEnumerator Example()
+	{
+		for (int i = 0; i < 10; i++)
+		{
+			yield return new WaitForSeconds(0.70f);
+			moveShader.Dispatch(moveHandle, resolution.x / 8, resolution.y / 8, 1);
+		}
 	}
 }
