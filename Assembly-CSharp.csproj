@@ -10,7 +10,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <RootNamespace></RootNamespace>
+    <RootNamespace>
+    </RootNamespace>
     <ProjectGuid>{3D65A02C-BDED-547B-B2EF-E5C7894B1847}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -63,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\GameManager.cs" />
+    <None Include="Assets\blur.compute" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/dev/SpaceStationManager/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
     </Reference>
