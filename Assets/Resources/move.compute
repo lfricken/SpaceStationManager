@@ -1,18 +1,17 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel move
+#pragma kernel moveHandle
 
-RWTexture2D<float4> input;
-RWTexture2D<float4> output;
+RWTexture2D<float4> moveTexture;
 
 float2 getContribution(float2 pos, float2 offset)
 {
-	return float2(input[pos + offset].g, input[pos + offset].a);
+	return float2(moveTexture[pos + offset].g, moveTexture[pos + offset].a);
 }
 
 [numthreads(8, 8, 1)]
-void move(uint3 id : SV_DispatchThreadID)
+void moveHandle(uint3 id : SV_DispatchThreadID)
 {
-	float myMult = input[id.xy].a;
+	float myMult = moveTexture[id.xy].a;
 	float2 pos = id.xy;
 
 	float2 sum = float2(0, 0);
@@ -31,7 +30,7 @@ void move(uint3 id : SV_DispatchThreadID)
 
 	sum.x /= sum.y;
 
-	output[id.xy] = float4(0, sum.x * myMult, 0, 1 * myMult);
+	moveTexture[id.xy] = float4(0, sum.x * myMult, 0, 1 * myMult);
 }
 
 
