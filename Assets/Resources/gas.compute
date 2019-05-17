@@ -1,0 +1,64 @@
+﻿
+
+struct PressureTile
+{
+	float pressure;
+	int blocked;
+};
+
+
+RWTexture2D<float4> RenderTexture;
+
+//float2 getContribution(float2 pos, float2 offset)
+//{
+//	return float2(moveTexture[pos + offset].g, moveTexture[pos + offset].a);
+//}
+
+//#pragma kernel moveHandle
+//[numthreads(8, 8, 1)]
+//void moveHandle(uint3 id : SV_DispatchThreadID)
+//{
+//	float myMult = moveTexture[id.xy].a;
+//	float2 pos = id.xy;
+//
+//	float2 sum = float2(0, 0);
+//
+//	sum += getContribution(pos, float2(1, -1));
+//	sum += getContribution(pos, float2(1, 0));
+//	sum += getContribution(pos, float2(1, 1));
+//
+//	sum += getContribution(pos, float2(0, -1));
+//	sum += getContribution(pos, float2(0, 0));
+//	sum += getContribution(pos, float2(0, 1));
+//
+//	sum += getContribution(pos, float2(-1, -1));
+//	sum += getContribution(pos, float2(-1, 0));
+//	sum += getContribution(pos, float2(-1, 1));
+//
+//	sum.x /= sum.y;
+//
+//	moveTexture[id.xy] = float4(0, sum.x * myMult, 0, 1 * myMult);
+//}
+
+//Clear Texture
+//#pragma kernel clearTexture
+//[numthreads(32, 32, 1)]
+//void clearTexture(uint3 id : SV_DispatchThreadID)
+//{
+//	RenderTexture[id.xy] = float4(0, 0, 0, 0);
+//}
+
+//Draw
+#pragma kernel render
+[numthreads(8, 8, 1)]
+void render(uint3 id : SV_DispatchThreadID)
+{
+	RenderTexture[id.xy] = float4(1, 0, 1, 1);
+}
+
+
+
+
+
+
+

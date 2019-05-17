@@ -63,8 +63,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\GameManager.cs" />
-    <Compile Include="Assets\Scripts\GpuComputer.cs" />
-    <None Include="Assets\Resources\move.compute" />
+    <Compile Include="Assets\Scripts\GasFlowShader.cs" />
+    <Compile Include="Assets\Scripts\GlobalSuppressions.cs" />
+    <None Include="Assets\Resources\gas.compute" />
     <None Include="Assets\Resources\pressure.compute" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/dev/SpaceStationManager/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
