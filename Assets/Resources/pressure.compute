@@ -3,7 +3,8 @@
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture2D<float4> pressureTexture;
+RWTexture2D<float4> input;
+RWTexture2D<float4> output;
 
 float2 getContribution(float2 pos, float2 offset)
 {

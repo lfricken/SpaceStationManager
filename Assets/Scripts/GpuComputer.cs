@@ -4,11 +4,10 @@ namespace Assets.Scripts
 {
 	public class GpuComputer
 	{
-		public GpuComputer(string _shaderName, Texture2D _dimensions)
+		public GpuComputer(string _shaderName, Texture2D initialValues)
 		{
 			shaderName = _shaderName;
-			read = _dimensions;
-			read.filterMode = FilterMode.Point;
+			read = initialValues;
 
 			input = new RenderTexture(read.width, read.height, 24);
 			input.enableRandomWrite = true;
@@ -46,12 +45,12 @@ namespace Assets.Scripts
 
 		public void Tick()
 		{
-			float groupDivider = 8;
-			shader.Dispatch(handle, input.width, input.height, 1);
-			RenderTexture.active = output;
-			read.ReadPixels(new Rect(0, 0, output.width / groupDivider, output.height / groupDivider), 0, 0);
-			read.Apply();
-			RenderTexture.active = null;
+			int groupDivider = 8;
+			shader.Dispatch(handle, input.width / groupDivider, input.height / groupDivider, 1);
+			//RenderTexture.active = output;
+			//read.ReadPixels(new Rect(0, 0, output.width / groupDivider, output.height / groupDivider), 0, 0);
+			//read.Apply();
+			//RenderTexture.active = null;
 		}
 	}
 }
