@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Runtime.InteropServices;
+using UnityEngine;
 
 namespace Assets.Scripts
 {
@@ -8,16 +9,37 @@ namespace Assets.Scripts
 		public int blocked;
 	}
 
-	public class GasFlowGpu
+	class DataBuffer<Data>
 	{
 		#region Buffer Data
-		ComputeBuffer tileBuffer;
-		PressureTile[] tileArray;
+		ComputeBuffer gpuBuffer;
+		public Data[] cpuData; // todo: add public accessors to modify data
+		readonly string BufferName;
 		#endregion
+
+		public DataBuffer(ComputeShader shader, int handle, string bufferName, Vector3Int resolution)
+		{
+			BufferName = bufferName;
+
+			cpuData = new Data[resolution.x * resolution.y];
+			gpuBuffer = new ComputeBuffer(cpuData.Length, Marshal.SizeOf(typeof(Data)));
+			shader.SetBuffer(handle, BufferName, gpuBuffer);
+		}
+
+		public void SendUpdatesToGpu()
+		{
+			gpuBuffer.SetData(cpuData);
+		}
+	}
+
+	public class GasFlowGpu
+	{
+		public Vector3Int Resolution;
+
+		DataBuffer<PressureTile> tiles;
 
 		#region Shader
 		public RenderTexture RenderTexture;
-		public Vector3Int Resolution;
 		readonly int numThreads = 8;
 
 		ComputeShader shader;
@@ -33,30 +55,24 @@ namespace Assets.Scripts
 			RenderTexture.Create();
 			RenderTexture.filterMode = FilterMode.Point;
 
-			SetupTiles(resolution);
-			SetupShaders();
+			SetupShaders(resolution);
 		}
 
-		void SetupTiles(Vector3Int resolution)
-		{
-			// array
-			tileArray = new PressureTile[resolution.x * resolution.y];
-			for (int i = 0; i < tileArray.Length; ++i)
-			{
-				tileArray[i].pressure = 0;
-				tileArray[i].blocked = 0;
-			}
-
-			// buffer
-			tileBuffer = new ComputeBuffer(tileArray.Length, System.Runtime.InteropServices.Marshal.SizeOf(typeof(PressureTile)));
-			tileBuffer.SetData(tileArray);
-		}
-
-		void SetupShaders()
+		void SetupShaders(Vector3Int resolution)
 		{
 			shader = Resources.Load<ComputeShader>("gas");
+
+			// render
 			render = shader.FindKernel(nameof(render));
+
 			shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
+
+			tiles = new DataBuffer<PressureTile>(shader, render, "PressureTiles", resolution);
+			tiles.cpuData[1].blocked = 1;
+			tiles.cpuData[0].pressure = 1;
+			tiles.cpuData[2].pressure = 1;
+			tiles.cpuData[3].pressure = 1;
+			tiles.SendUpdatesToGpu();
 		}
 
 		public void Tick()

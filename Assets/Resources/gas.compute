@@ -6,6 +6,7 @@ struct PressureTile
 	int blocked;
 };
 
+RWStructuredBuffer<PressureTile> PressureTiles;
 
 RWTexture2D<float4> RenderTexture;
 
@@ -49,11 +50,35 @@ RWTexture2D<float4> RenderTexture;
 //}
 
 //Draw
+
+uint index(uint2 pos)
+{
+	uint x;
+	uint y;
+	RenderTexture.GetDimensions(x, y);
+
+	return pos.x + pos.y * x;
+}
+
 #pragma kernel render
 [numthreads(8, 8, 1)]
-void render(uint3 id : SV_DispatchThreadID)
+void render(uint3 pix : SV_DispatchThreadID)
 {
-	RenderTexture[id.xy] = float4(1, 0, 1, 1);
+	float4 c = float4(1, 1, 1, 1);
+	uint2 pos = uint2(pix.x, pix.y);
+
+	PressureTile tile = PressureTiles[index(pos.xy)];
+
+	if(tile.blocked)
+	{
+		c.rgb = 0;
+	}
+	else
+	{
+		c.gb = (tile.pressure * -1) + 1;
+	}
+
+	RenderTexture[pos.xy] = c;
 }
 
 
