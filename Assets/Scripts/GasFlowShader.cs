@@ -17,18 +17,22 @@ namespace Assets.Scripts
 		readonly string BufferName;
 		#endregion
 
-		public DataBuffer(ComputeShader shader, int handle, string bufferName, Vector3Int resolution)
+		public DataBuffer(string bufferName, Vector3Int resolution)
 		{
 			BufferName = bufferName;
 
 			cpuData = new Data[resolution.x * resolution.y];
 			gpuBuffer = new ComputeBuffer(cpuData.Length, Marshal.SizeOf(typeof(Data)));
-			shader.SetBuffer(handle, BufferName, gpuBuffer);
 		}
 
 		public void SendUpdatesToGpu()
 		{
 			gpuBuffer.SetData(cpuData);
+		}
+
+		public void SendTo(int handle, ComputeShader shader)
+		{
+			shader.SetBuffer(handle, BufferName, gpuBuffer);
 		}
 	}
 
@@ -40,9 +44,13 @@ namespace Assets.Scripts
 
 		#region Shader
 		public RenderTexture RenderTexture;
-		readonly int numThreads = 8;
+		/// <summary>
+		/// If you update this, you need to update gas.compute!
+		/// </summary>
+		readonly int numXYThreads = 16;
 
 		ComputeShader shader;
+		int disperse;
 		int render;
 		#endregion
 
@@ -60,24 +68,39 @@ namespace Assets.Scripts
 
 		void SetupShaders(Vector3Int resolution)
 		{
-			shader = Resources.Load<ComputeShader>("gas");
-
-			// render
-			render = shader.FindKernel(nameof(render));
-
-			shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
-
-			tiles = new DataBuffer<PressureTile>(shader, render, "PressureTiles", resolution);
+			tiles = new DataBuffer<PressureTile>("PressureTiles", resolution);
 			tiles.cpuData[1].blocked = 1;
 			tiles.cpuData[0].pressure = 1;
 			tiles.cpuData[2].pressure = 1;
 			tiles.cpuData[3].pressure = 1;
+			tiles.cpuData[63].blocked = 1;
+			tiles.cpuData[67].blocked = 1;
+			tiles.cpuData[323].blocked = 1;
 			tiles.SendUpdatesToGpu();
+
+			// shader
+			shader = Resources.Load<ComputeShader>("gas");
+
+			// disperse
+			{
+				disperse = shader.FindKernel(nameof(disperse));
+				tiles.SendTo(disperse, shader);
+			}
+
+			// render
+			{
+				render = shader.FindKernel(nameof(render));
+				tiles.SendTo(render, shader);
+				shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
+			}
 		}
 
 		public void Tick()
 		{
-			shader.Dispatch(render, Resolution.x / numThreads, Resolution.y / numThreads, 1);
+			int threadGroups = Resolution.x / numXYThreads;
+
+			shader.Dispatch(disperse, threadGroups, threadGroups, 1);
+			shader.Dispatch(render, threadGroups, threadGroups, 1);
 		}
 	}
 }

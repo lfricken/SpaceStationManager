@@ -6,40 +6,53 @@ struct PressureTile
 	int blocked;
 };
 
+
 RWStructuredBuffer<PressureTile> PressureTiles;
 
 RWTexture2D<float4> RenderTexture;
 
-//float2 getContribution(float2 pos, float2 offset)
-//{
-//	return float2(moveTexture[pos + offset].g, moveTexture[pos + offset].a);
-//}
+uint index(uint2 pos)
+{
+	uint x;
+	uint y;
+	PressureTiles.GetDimensions(x, y);
 
-//#pragma kernel moveHandle
-//[numthreads(8, 8, 1)]
-//void moveHandle(uint3 id : SV_DispatchThreadID)
-//{
-//	float myMult = moveTexture[id.xy].a;
-//	float2 pos = id.xy;
-//
-//	float2 sum = float2(0, 0);
-//
-//	sum += getContribution(pos, float2(1, -1));
-//	sum += getContribution(pos, float2(1, 0));
-//	sum += getContribution(pos, float2(1, 1));
-//
-//	sum += getContribution(pos, float2(0, -1));
-//	sum += getContribution(pos, float2(0, 0));
-//	sum += getContribution(pos, float2(0, 1));
-//
-//	sum += getContribution(pos, float2(-1, -1));
-//	sum += getContribution(pos, float2(-1, 0));
-//	sum += getContribution(pos, float2(-1, 1));
-//
-//	sum.x /= sum.y;
-//
-//	moveTexture[id.xy] = float4(0, sum.x * myMult, 0, 1 * myMult);
-//}
+	return pos.x + pos.y * x;
+}
+
+float2 getContribution(float2 pos, float2 offset)
+{
+	PressureTile tile = PressureTiles[index(pos + offset)];
+	return float2(tile.pressure, tile.blocked);
+}
+
+#pragma kernel disperse
+[numthreads(16, 16, 1)]
+void disperse(uint3 pix : SV_DispatchThreadID)
+{
+	uint2 pos = uint2(pix.x, pix.y);
+	PressureTile tile = PressureTiles[index(pos.xy)];
+	if(tile.blocked)
+		return;
+
+	float2 sum = float2(0, 0);
+
+	sum += getContribution(pos, float2(1, -1));
+	sum += getContribution(pos, float2(1, 0));
+	sum += getContribution(pos, float2(1, 1));
+
+	sum += getContribution(pos, float2(0, -1));
+	sum += getContribution(pos, float2(0, 0));
+	sum += getContribution(pos, float2(0, 1));
+
+	sum += getContribution(pos, float2(-1, -1));
+	sum += getContribution(pos, float2(-1, 0));
+	sum += getContribution(pos, float2(-1, 1));
+
+	sum.x /= sum.y;
+
+	PressureTiles[index(pos.xy)].pressure = 1;// sum.x;
+}
 
 //Clear Texture
 //#pragma kernel clearTexture
@@ -51,20 +64,11 @@ RWTexture2D<float4> RenderTexture;
 
 //Draw
 
-uint index(uint2 pos)
-{
-	uint x;
-	uint y;
-	RenderTexture.GetDimensions(x, y);
-
-	return pos.x + pos.y * x;
-}
-
 #pragma kernel render
-[numthreads(8, 8, 1)]
+[numthreads(16, 16, 1)]
 void render(uint3 pix : SV_DispatchThreadID)
 {
-	float4 c = float4(1, 1, 1, 1);
+	float4 c = float4(1, 0, 1, 1);
 	uint2 pos = uint2(pix.x, pix.y);
 
 	PressureTile tile = PressureTiles[index(pos.xy)];
@@ -73,10 +77,10 @@ void render(uint3 pix : SV_DispatchThreadID)
 	{
 		c.rgb = 0;
 	}
-	else
-	{
-		c.gb = (tile.pressure * -1) + 1;
-	}
+	//else
+	//{
+	//	c.gb = (tile.pressure * -1) + 1;
+	//}
 
 	RenderTexture[pos.xy] = c;
 }
