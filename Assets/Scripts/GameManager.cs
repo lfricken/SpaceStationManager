@@ -74,7 +74,7 @@ public class GameManager : MonoBehaviour
 	{
 		for (int i = 0; i < 1000; i++)
 		{
-			yield return new WaitForSeconds(0.016f);
+			yield return new WaitForSeconds(0.05f);
 			gas.Tick();
 		}
 	}

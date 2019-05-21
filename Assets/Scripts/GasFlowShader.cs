@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
@@ -16,7 +17,7 @@ namespace Assets.Scripts
 		void ApplyDelta(ImplementingClass other);
 	}
 
-	struct PressureTile : IApplyDelta<PressureTile>
+	public struct PressureTile : IApplyDelta<PressureTile>
 	{
 		public float pressure;
 		private int blocked;
@@ -35,8 +36,10 @@ namespace Assets.Scripts
 		/// </summary>
 		public void ApplyDelta(PressureTile other)
 		{
-			pressure += other.pressure;
-			Blocked = other.Blocked;
+			pressure = other.pressure;
+			blocked = other.blocked;
+			dx = other.dx;
+			dy = other.dy;
 		}
 	}
 
@@ -108,6 +111,8 @@ namespace Assets.Scripts
 		readonly int numXYThreads = 16;
 
 		ComputeShader shader;
+		int copyToWrite;
+		int copyToRead;
 		int forces;
 		int diffuse;
 		int render;
@@ -125,16 +130,13 @@ namespace Assets.Scripts
 			SetupShaders(resolution);
 		}
 
-		public void Block(Vector2Int start, Vector2Int end)
+		public void ApplyDelta(Vector2Int start, Vector2Int end, PressureTile delta)
 		{
-			PressureTile tile = new PressureTile();
-			tile.Blocked = true;
-			tile.pressure = 0;
 			for (int x = start.x; x <= end.x; x++)
 			{
 				for (int y = start.y; y <= end.y; y++)
 				{
-					tiles.AddDelta(new Vector2Int(x, y), tile);
+					tiles.AddDelta(new Vector2Int(x, y), delta);
 				}
 			}
 
@@ -162,19 +164,57 @@ namespace Assets.Scripts
 				tiles.AddDelta(new Vector2Int(resolution.x - 1, y), tile);
 			}
 
-			Block(new Vector2Int(10, 16), new Vector2Int(20, 16));
+			//tile.Blocked = false;
+			//tile.pressure = 0;
+			//tile.dx = 0.2f;
+			//ApplyDelta(new Vector2Int(1, 1), new Vector2Int(22, 22), tile);
+
+			tile.pressure = 0;
+			tile.dx = 0f;
+			tile.Blocked = true;
+			ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), tile);
+			tile.Blocked = false;
+			ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), tile);
+			tile.Blocked = true;
+			ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), tile);
+			tile.Blocked = false;
+			ApplyDelta(new Vector2Int(11, 16), new Vector2Int(13, 16), tile);
 
 			tile.Blocked = false;
-			tile.pressure = 724;
+			tile.dx = 2f;
+			ApplyDelta(new Vector2Int(1, 1), new Vector2Int(39, 10), tile);
+
+			tile.Blocked = false;
+			tile.pressure = 1605f;
+			tile.dx = 0.1f;
 			tiles.AddDelta(new Vector2Int(14, 14), tile);
+
 			tiles.SendUpdatesToGpu();
 
 			// shader
 			shader = Resources.Load<ComputeShader>("gas");
 
+			// copyToWrite
+			{
+				copyToWrite = shader.FindKernel(nameof(copyToWrite));
+				tiles.SendTo(copyToWrite, shader);
+				writeTiles.SendTo(copyToWrite, shader);
+				tiles.SendTo(copyToWrite, shader);
+			}
+
+			// copyToRead
+			{
+				copyToRead = shader.FindKernel(nameof(copyToRead));
+				tiles.SendTo(copyToRead, shader);
+				writeTiles.SendTo(copyToRead, shader);
+				tiles.SendTo(copyToRead, shader);
+			}
+
 			// forces
 			{
 				forces = shader.FindKernel(nameof(forces));
+				tiles.SendTo(diffuse, shader);
+				writeTiles.SendTo(diffuse, shader);
 				tiles.SendTo(forces, shader);
 			}
 
@@ -198,8 +238,14 @@ namespace Assets.Scripts
 		{
 			int threadGroups = Resolution.x / numXYThreads;
 
-			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
+			shader.Dispatch(copyToWrite, threadGroups, threadGroups, 1);
+
 			shader.Dispatch(diffuse, threadGroups, threadGroups, 1);
+			shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
+
+			shader.Dispatch(forces, threadGroups, threadGroups, 1);
+			shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
+
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
 		}
 	}
