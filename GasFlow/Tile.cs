@@ -8,11 +8,6 @@ namespace GasFlow
 
 		public float TotalPressure { get; set; }
 
-		public float dr;
-		public float dl;
-		public float du;
-		public float dd;
-
 		public virtual void Update(List<Tile> readTiles)
 		{
 			if (Blocked) { return; }

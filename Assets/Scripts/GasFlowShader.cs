@@ -21,6 +21,9 @@ namespace Assets.Scripts
 		public float pressure;
 		private int blocked;
 
+		public float dx;
+		public float dy;
+
 		public bool Blocked
 		{
 			get { return blocked == 1; }
