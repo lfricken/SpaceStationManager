@@ -75,13 +75,13 @@ float getContributionX(float2 pos, float2 offset)
 	return contrib;
 }
 
-float getContribution(float2 pos, float2 offset)
+float2 getContribution(float2 pos, float2 offset)
 {
 	PressureTile tile = PressureTiles[index(pos + offset)];
 
 	float contrib = tile.pressure;
 
-	return contrib;
+	return float2(contrib, (tile.blocked * -1) + 1);
 }
 
 #pragma kernel disperse
@@ -102,9 +102,9 @@ void disperse(uint3 pix : SV_DispatchThreadID)
 	// we expect this much to leave the tilee
 	//PressureTilesWrite[index(pos)].pressure -= tile.pressure * (tile.dl + tile.dr + tile.du + tile.dd);
 	float diff = 0.1;
-	float a = 0.1;// diff * 32 * 32;
+	float a = 0.2;// diff * 32 * 32;
 
-	float otherContributions = 0;
+	float2 otherContributions = float2(0, 0);
 
 
 	otherContributions += getContribution(pos, float2(1, 0));
@@ -112,12 +112,12 @@ void disperse(uint3 pix : SV_DispatchThreadID)
 	otherContributions += getContribution(pos, float2(-1, 0));
 	otherContributions += getContribution(pos, float2(0, -1));
 
-	otherContributions -= 4 * tile.pressure;
-	otherContributions *= a;
+	otherContributions.x -= otherContributions.y * tile.pressure;
+	otherContributions.x *= a;
 
-	otherContributions += tile.pressure;
+	otherContributions.x += tile.pressure;
 
-	PressureTilesWrite[index(pos)].pressure = otherContributions;
+	PressureTilesWrite[index(pos)].pressure = otherContributions.x;
 
 }
 

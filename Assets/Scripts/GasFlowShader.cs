@@ -125,6 +125,22 @@ namespace Assets.Scripts
 			SetupShaders(resolution);
 		}
 
+		public void Block(Vector2Int start, Vector2Int end)
+		{
+			PressureTile tile = new PressureTile();
+			tile.Blocked = true;
+			tile.pressure = 0;
+			for (int x = start.x; x <= end.x; x++)
+			{
+				for (int y = start.y; y <= end.y; y++)
+				{
+					tiles.AddDelta(new Vector2Int(x, y), tile);
+				}
+			}
+
+			tiles.SendUpdatesToGpu();
+		}
+
 		void SetupShaders(Vector3Int resolution)
 		{
 			tiles = new DataBuffer<PressureTile>("PressureTiles", resolution);
@@ -146,17 +162,11 @@ namespace Assets.Scripts
 				tiles.AddDelta(new Vector2Int(resolution.x - 1, y), tile);
 			}
 
-
-			tiles.AddDelta(new Vector2Int(2, 3), tile);
-			tiles.AddDelta(new Vector2Int(3, 3), tile);
+			Block(new Vector2Int(10, 16), new Vector2Int(20, 16));
 
 			tile.Blocked = false;
-			tile.pressure = 25;
+			tile.pressure = 724;
 			tiles.AddDelta(new Vector2Int(14, 14), tile);
-			//tiles.AddDelta(new Vector2Int(31, 32), tile);
-			//tiles.AddDelta(new Vector2Int(30, 32), tile);
-			//tiles.AddDelta(new Vector2Int(29, 32), tile);
-			//tiles.AddDelta(new Vector2Int(28, 32), tile);
 			tiles.SendUpdatesToGpu();
 
 			// shader
