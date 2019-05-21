@@ -33,6 +33,61 @@ public class GameManager : MonoBehaviour
 		return val;
 	}
 
+	void project(float dims, float[] dx, float[] dy, float[] p, float[] div)
+	{
+		int i, j, k;
+		float h;
+		h = 1.0f / dims;
+		for (i = 1; i <= dims; i++)
+		{
+			for (j = 1; j <= dims; j++)
+			{
+				div[at(i, j)] = -0.5f * h * (dx[at(i + 1, j)] - dx[at(i - 1, j)] +
+				dy[at(i, j + 1)] - dy[at(i, j - 1)]);
+				p[at(i, j)] = 0;
+			}
+		}
+		set_bnd(dims, 0, div); set_bnd(dims, 0, p);
+		for (k = 0; k < 20; k++)
+		{
+			for (i = 1; i <= dims; i++)
+			{
+				for (j = 1; j <= dims; j++)
+				{
+					p[at(i, j)] = (div[at(i, j)] + p[at(i - 1, j)] + p[at(i + 1, j)] +
+					 p[at(i, j - 1)] + p[at(i, j + 1)]) / 4;
+				}
+			}
+			set_bnd(dims, 0, p);
+		}
+		for (i = 1; i <= dims; i++)
+		{
+			for (j = 1; j <= dims; j++)
+			{
+				dx[at(i, j)] -= 0.5f * (p[at(i + 1, j)] - p[at(i - 1, j)]) / h;
+				dy[at(i, j)] -= 0.5f * (p[at(i, j + 1)] - p[at(i, j - 1)]) / h;
+			}
+		}
+		set_bnd(dims, 1, dx); set_bnd(dims, 2, dy);
+	}
+
+	void set_bnd(float _dims, int boundary, float[] tiles)
+	{
+		int dims = (int)_dims;
+		int i;
+		for (i = 1; i <= dims; i++)
+		{
+			tiles[at(0, i)] = (boundary == 1) ? -tiles[at(1, i)] : tiles[at(1, i)];
+			tiles[at(dims + 1, i)] = boundary == 1 ? -tiles[at(dims, i)] : tiles[at(dims, i)];
+			tiles[at(i, 0)] = boundary == 2 ? -tiles[at(i, 1)] : tiles[at(i, 1)];
+			tiles[at(i, dims + 1)] = boundary == 2 ? -tiles[at(i, dims)] : tiles[at(i, dims)];
+		}
+		tiles[at(0, 0)] = 0.5f * (tiles[at(1, 0)] + tiles[at(0, 1)]);
+		tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
+		tiles[at(dims + 1, 0)] = 0.5f * (tiles[at(dims, 0)] + tiles[at(dims + 1, 1)]);
+		tiles[at(dims + 1, dims + 1)] = 0.5f * (tiles[at(dims, dims + 1)] + tiles[at(dims + 1, dims)]);
+	}
+
 	void advect(int dim, float[] newPressure, float[] oldPressure, float[] velX, float[] velY, float dt)
 	{
 		int x, y;

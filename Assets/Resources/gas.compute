@@ -60,7 +60,7 @@ void advect(int dim, int x, int y)
 	t0 = 1 - t1;
 
 
-	PressureTilesWrite[at(x, y)].pressure = 1.0 * (s0 * (t0 * PressureTiles[at(x0, y0)].pressure + t1 * PressureTiles[at(x0, y1)].pressure) + s1 * (t0 * PressureTiles[at(x1, y0)].pressure + t1 * PressureTiles[at(x1, y1)].pressure));
+	PressureTilesWrite[at(x, y)].pressure = (s0 * (t0 * PressureTiles[at(x0, y0)].pressure + t1 * PressureTiles[at(x0, y1)].pressure) + s1 * (t0 * PressureTiles[at(x1, y0)].pressure + t1 * PressureTiles[at(x1, y1)].pressure));
 }
 //a
 #pragma kernel forces
