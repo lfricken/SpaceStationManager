@@ -20,6 +20,8 @@ namespace Assets.Scripts
 	{
 		public float pressure;
 		private int blocked;
+		public float dx;
+		public float dy;
 
 		public bool Blocked
 		{
@@ -102,6 +104,7 @@ namespace Assets.Scripts
 		readonly int numXYThreads = 16;
 
 		ComputeShader shader;
+		int forces;
 		int disperse;
 		int render;
 		#endregion
@@ -144,12 +147,17 @@ namespace Assets.Scripts
 
 			tile.Blocked = false;
 			tile.pressure = 1000;
-			tiles.AddDelta(new Vector2Int(1, 2), tile);
-			tiles.AddDelta(new Vector2Int(8, 8), tile);
+			tiles.AddDelta(new Vector2Int(100, 100), tile);
 			tiles.SendUpdatesToGpu();
 
 			// shader
 			shader = Resources.Load<ComputeShader>("gas");
+
+			// disperse
+			{
+				forces = shader.FindKernel(nameof(forces));
+				tiles.SendTo(forces, shader);
+			}
 
 			// disperse
 			{
@@ -169,6 +177,7 @@ namespace Assets.Scripts
 		{
 			int threadGroups = Resolution.x / numXYThreads;
 
+			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
 			shader.Dispatch(disperse, threadGroups, threadGroups, 1);
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
 		}

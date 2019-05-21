@@ -4,6 +4,9 @@ struct PressureTile
 {
 	float pressure;
 	int blocked;
+
+	float dx;
+	float dy;
 };
 uint index(float2 pos)
 {
@@ -13,10 +16,51 @@ RWStructuredBuffer<PressureTile> PressureTiles;
 
 RWTexture2D<float4> RenderTexture;
 
-float2 getContribution(float2 pos, float2 offset)
+
+float2 getForces(float2 pos, float2 offset)
+{
+	PressureTile currentTile = PressureTiles[index(pos)];
+	PressureTile newTile = PressureTiles[index(pos + offset)];
+
+	// if offset is -1 and has more pressure, produce positive value
+	float2 delta = (currentTile.pressure - newTile.pressure) * offset;
+
+	delta /= float(10);//float2(0, 0);
+
+	return delta;
+}
+
+#pragma kernel forces
+[numthreads(16, 16, 1)]
+void forces(uint3 pix : SV_DispatchThreadID)
+{
+	float2 pos = float2(pix.x, pix.y);
+	PressureTile tile = PressureTiles[index(pos)];
+	if(tile.blocked)
+		return;
+
+	float2 sum = float2(0, 0);
+
+	sum += getForces(pos, float2(1, 0));
+	sum += getForces(pos, float2(0, -1));
+	sum += getForces(pos, float2(0, 0));
+	sum += getForces(pos, float2(0, 1));
+	sum += getForces(pos, float2(-1, 0));
+
+	PressureTiles[index(pos)].dx = sum.x;
+	PressureTiles[index(pos)].dy = sum.y;
+}
+
+float3 getContribution(float2 pos, float2 offset)
 {
 	PressureTile tile = PressureTiles[index(pos + offset)];
-	return float2(tile.pressure, tile.blocked * -1 + 1);
+
+	float2 contribs = float2(-tile.dx, -tile.dy) * offset;
+	contribs.x = max(0, contribs.x);
+	contribs.y = max(0, contribs.y);
+	float sum = tile.pressure * (contribs.x + contribs.y);
+
+	return float3(tile.pressure, tile.blocked * -1 + 1, sum);
 }
 
 #pragma kernel disperse
@@ -28,35 +72,20 @@ void disperse(uint3 pix : SV_DispatchThreadID)
 	if(tile.blocked)
 		return;
 
-	float2 sum = float2(0, 0);
+	PressureTiles[index(pos)].pressure -= (tile.dx + tile.dy); // we expect this much to leave the tile
 
-	sum += getContribution(pos, float2(1, -1));
+	float3 sum = float3(0, 0, 0);
+
 	sum += getContribution(pos, float2(1, 0));
-	sum += getContribution(pos, float2(1, 1));
-
 	sum += getContribution(pos, float2(0, -1));
 	sum += getContribution(pos, float2(0, 0));
 	sum += getContribution(pos, float2(0, 1));
-
-	sum += getContribution(pos, float2(-1, -1));
 	sum += getContribution(pos, float2(-1, 0));
-	sum += getContribution(pos, float2(-1, 1));
 
 	sum.x /= sum.y;
 
-	PressureTiles[index(pos)].pressure = sum.x;
+	PressureTiles[index(pos)].pressure = sum.x + sum.z;
 }
-
-//Clear Texture
-//#pragma kernel clearTexture
-//[numthreads(32, 32, 1)]
-//void clearTexture(uint3 id : SV_DispatchThreadID)
-//{
-//	RenderTexture[id.xy] = float4(0, 0, 0, 0);
-//}
-
-//Draw
-
 
 float4 gradient(float value)
 {

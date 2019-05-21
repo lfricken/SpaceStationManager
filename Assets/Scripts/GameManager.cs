@@ -26,7 +26,7 @@ public class GameManager : MonoBehaviour
 	{
 		for (int i = 0; i < 1000; i++)
 		{
-			yield return new WaitForSeconds(0.00f);
+			yield return new WaitForSeconds(.016f);
 			gas.Tick();
 		}
 	}
