@@ -1,31 +1,34 @@
-﻿
+﻿#pragma enable_d3d11_debug_symbols
 
 struct PressureTile
 {
 	float pressure;
 	int blocked;
 
-	float dx;
-	float dy;
+	float dr;
+	float dl;
+	float du;
+	float dd;
 };
 uint index(float2 pos)
 {
-	return pos.x + pos.y * 256;
+	return pos.x + pos.y * 32;
 }
+RWStructuredBuffer<PressureTile> PressureTilesWrite;
 RWStructuredBuffer<PressureTile> PressureTiles;
 
 RWTexture2D<float4> RenderTexture;
 
 
-float2 getForces(float2 pos, float2 offset)
+float2 getOutflow(float2 pos, float2 offset)
 {
 	PressureTile currentTile = PressureTiles[index(pos)];
 	PressureTile newTile = PressureTiles[index(pos + offset)];
 
 	// if offset is -1 and has more pressure, produce positive value
-	float2 delta = (currentTile.pressure - newTile.pressure) * offset;
+	float delta = max(0, currentTile.pressure - newTile.pressure);
 
-	delta /= float(10);//float2(0, 0);
+	delta /= float(5);
 
 	return delta;
 }
@@ -39,28 +42,37 @@ void forces(uint3 pix : SV_DispatchThreadID)
 	if(tile.blocked)
 		return;
 
-	float2 sum = float2(0, 0);
-
-	sum += getForces(pos, float2(1, 0));
-	sum += getForces(pos, float2(0, -1));
-	sum += getForces(pos, float2(0, 0));
-	sum += getForces(pos, float2(0, 1));
-	sum += getForces(pos, float2(-1, 0));
-
-	PressureTiles[index(pos)].dx = sum.x;
-	PressureTiles[index(pos)].dy = sum.y;
+	PressureTiles[index(pos)].dr += getOutflow(pos, float2(1, 0));
+	PressureTiles[index(pos)].dl += getOutflow(pos, float2(-1, 0));
+	PressureTiles[index(pos)].du += getOutflow(pos, float2(0, 1));
+	PressureTiles[index(pos)].dd += getOutflow(pos, float2(0, -1));
 }
 
-float3 getContribution(float2 pos, float2 offset)
+float getContribution(float2 pos, float2 offset)
 {
 	PressureTile tile = PressureTiles[index(pos + offset)];
 
-	float2 contribs = float2(-tile.dx, -tile.dy) * offset;
-	contribs.x = max(0, contribs.x);
-	contribs.y = max(0, contribs.y);
-	float sum = tile.pressure * (contribs.x + contribs.y);
+	offset *= -1; // since we want to reverse the direction
+	float contrib = 0;
+	if(offset.x == 1 && offset.y == 0)
+	{
+		contrib = tile.dr;
+	}
+	else if(offset.x == -1 && offset.y == 0)
+	{
+		contrib = tile.dl;
+	}
+	else if(offset.x == 0 && offset.y == 1)
+	{
+		contrib = tile.du;
+	}
+	else if(offset.x == 0 && offset.y == -1)
+	{
+		contrib = tile.dd;
+	}
+	contrib *= tile.pressure;
 
-	return float3(tile.pressure, tile.blocked * -1 + 1, sum);
+	return contrib;
 }
 
 #pragma kernel disperse
@@ -69,22 +81,27 @@ void disperse(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = float2(pix.x, pix.y);
 	PressureTile tile = PressureTiles[index(pos)];
+	PressureTilesWrite[index(pos)] = tile;
+
+
+	// TODO don't just return
 	if(tile.blocked)
+	{
 		return;
+	}
 
-	PressureTiles[index(pos)].pressure -= (tile.dx + tile.dy); // we expect this much to leave the tile
+	// we expect this much to leave the tile
+	PressureTilesWrite[index(pos)].pressure -= tile.pressure * (tile.dl + tile.dr + tile.du + tile.dd);
 
-	float3 sum = float3(0, 0, 0);
+	float otherContributions = 0;
 
-	sum += getContribution(pos, float2(1, 0));
-	sum += getContribution(pos, float2(0, -1));
-	sum += getContribution(pos, float2(0, 0));
-	sum += getContribution(pos, float2(0, 1));
-	sum += getContribution(pos, float2(-1, 0));
+	otherContributions += getContribution(pos, float2(1, 0));
+	otherContributions += getContribution(pos, float2(0, 1));
+	otherContributions += getContribution(pos, float2(-1, 0));
+	otherContributions += getContribution(pos, float2(0, -1));
 
-	sum.x /= sum.y;
+	PressureTilesWrite[index(pos)].pressure += otherContributions;
 
-	PressureTiles[index(pos)].pressure = sum.x + sum.z;
 }
 
 float4 gradient(float value)
@@ -126,6 +143,8 @@ void render(uint3 pix : SV_DispatchThreadID)
 	float4 c = float4(1, 0, 1, 1);
 	float2 pos = float2(pix.x, pix.y);
 
+	// copy the write to the read
+	PressureTiles[index(pos)] = PressureTilesWrite[index(pos)];
 	PressureTile tile = PressureTiles[index(pos)];
 
 	if(tile.blocked)

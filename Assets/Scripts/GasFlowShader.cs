@@ -20,8 +20,11 @@ namespace Assets.Scripts
 	{
 		public float pressure;
 		private int blocked;
-		public float dx;
-		public float dy;
+
+		float dr;
+		float dl;
+		float du;
+		float dd;
 
 		public bool Blocked
 		{
@@ -59,7 +62,7 @@ namespace Assets.Scripts
 
 		int index(Vector2Int position)
 		{
-			return position.x + position.y * 256;
+			return position.x + position.y * 32;
 		}
 
 		public void AddDelta(Vector2Int position, Data data)
@@ -95,6 +98,7 @@ namespace Assets.Scripts
 		public Vector3Int Resolution;
 
 		DataBuffer<PressureTile> tiles;
+		DataBuffer<PressureTile> writeTiles;
 
 		#region Shader
 		public RenderTexture RenderTexture;
@@ -124,6 +128,7 @@ namespace Assets.Scripts
 		void SetupShaders(Vector3Int resolution)
 		{
 			tiles = new DataBuffer<PressureTile>("PressureTiles", resolution);
+			writeTiles = new DataBuffer<PressureTile>("PressureTilesWrite", resolution);
 			PressureTile tile = new PressureTile();
 
 			tile.Blocked = true;
@@ -146,8 +151,12 @@ namespace Assets.Scripts
 			tiles.AddDelta(new Vector2Int(3, 3), tile);
 
 			tile.Blocked = false;
-			tile.pressure = 1000;
-			tiles.AddDelta(new Vector2Int(100, 100), tile);
+			tile.pressure = 30;
+			tiles.AddDelta(new Vector2Int(14, 14), tile);
+			//tiles.AddDelta(new Vector2Int(31, 32), tile);
+			//tiles.AddDelta(new Vector2Int(30, 32), tile);
+			//tiles.AddDelta(new Vector2Int(29, 32), tile);
+			//tiles.AddDelta(new Vector2Int(28, 32), tile);
 			tiles.SendUpdatesToGpu();
 
 			// shader
@@ -163,12 +172,14 @@ namespace Assets.Scripts
 			{
 				disperse = shader.FindKernel(nameof(disperse));
 				tiles.SendTo(disperse, shader);
+				writeTiles.SendTo(disperse, shader);
 			}
 
 			// render
 			{
 				render = shader.FindKernel(nameof(render));
 				tiles.SendTo(render, shader);
+				writeTiles.SendTo(render, shader);
 				shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
 			}
 		}
@@ -177,7 +188,7 @@ namespace Assets.Scripts
 		{
 			int threadGroups = Resolution.x / numXYThreads;
 
-			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
+			shader.Dispatch(forces, threadGroups, threadGroups, 1);
 			shader.Dispatch(disperse, threadGroups, threadGroups, 1);
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
 		}
