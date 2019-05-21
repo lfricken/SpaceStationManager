@@ -151,7 +151,7 @@ namespace Assets.Scripts
 			tiles.AddDelta(new Vector2Int(3, 3), tile);
 
 			tile.Blocked = false;
-			tile.pressure = 30;
+			tile.pressure = 25;
 			tiles.AddDelta(new Vector2Int(14, 14), tile);
 			//tiles.AddDelta(new Vector2Int(31, 32), tile);
 			//tiles.AddDelta(new Vector2Int(30, 32), tile);
@@ -188,7 +188,7 @@ namespace Assets.Scripts
 		{
 			int threadGroups = Resolution.x / numXYThreads;
 
-			shader.Dispatch(forces, threadGroups, threadGroups, 1);
+			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
 			shader.Dispatch(disperse, threadGroups, threadGroups, 1);
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
 		}

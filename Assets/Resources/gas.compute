@@ -48,7 +48,7 @@ void forces(uint3 pix : SV_DispatchThreadID)
 	PressureTiles[index(pos)].dd += getOutflow(pos, float2(0, -1));
 }
 
-float getContribution(float2 pos, float2 offset)
+float getContributionX(float2 pos, float2 offset)
 {
 	PressureTile tile = PressureTiles[index(pos + offset)];
 
@@ -75,6 +75,15 @@ float getContribution(float2 pos, float2 offset)
 	return contrib;
 }
 
+float getContribution(float2 pos, float2 offset)
+{
+	PressureTile tile = PressureTiles[index(pos + offset)];
+
+	float contrib = tile.pressure;
+
+	return contrib;
+}
+
 #pragma kernel disperse
 [numthreads(16, 16, 1)]
 void disperse(uint3 pix : SV_DispatchThreadID)
@@ -90,17 +99,25 @@ void disperse(uint3 pix : SV_DispatchThreadID)
 		return;
 	}
 
-	// we expect this much to leave the tile
-	PressureTilesWrite[index(pos)].pressure -= tile.pressure * (tile.dl + tile.dr + tile.du + tile.dd);
+	// we expect this much to leave the tilee
+	//PressureTilesWrite[index(pos)].pressure -= tile.pressure * (tile.dl + tile.dr + tile.du + tile.dd);
+	float diff = 0.1;
+	float a = 0.1;// diff * 32 * 32;
 
 	float otherContributions = 0;
+
 
 	otherContributions += getContribution(pos, float2(1, 0));
 	otherContributions += getContribution(pos, float2(0, 1));
 	otherContributions += getContribution(pos, float2(-1, 0));
 	otherContributions += getContribution(pos, float2(0, -1));
 
-	PressureTilesWrite[index(pos)].pressure += otherContributions;
+	otherContributions -= 4 * tile.pressure;
+	otherContributions *= a;
+
+	otherContributions += tile.pressure;
+
+	PressureTilesWrite[index(pos)].pressure = otherContributions;
 
 }
 
