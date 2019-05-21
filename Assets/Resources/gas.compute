@@ -13,16 +13,17 @@ RWStructuredBuffer<float> dy;
 RWStructuredBuffer<float> dyWrite;
 
 RWTexture2D<float4> RenderTexture;
+int shaderSizeX;
 
 uint at(float2 pos)
 {
-	return pos.x + pos.y * 64;
+	return pos.x + pos.y * shaderSizeX;
 }
 uint at(float x, float y)
 {
-	return x + y * 64;
+	return x + y * shaderSizeX;
 }
-float clamp(float val, int dim)
+float clampy(float val, int dim)
 {
 	if(val < 0.5)
 		val = 0.5f;
@@ -47,11 +48,11 @@ void advect(int dim, int x, int y, RWStructuredBuffer<int> blocked, RWStructured
 	xStart = x - deltaTime * velX[at(x, y)];
 	yStart = y - deltaTime * velY[at(x, y)];
 
-	xStart = clamp(xStart, dim);
+	xStart = clampy(xStart, dim);
 	x0 = (int)xStart;
 	x1 = x0 + 1;
 
-	yStart = clamp(yStart, dim);
+	yStart = clampy(yStart, dim);
 	y0 = (int)yStart;
 	y1 = y0 + 1;
 
@@ -68,7 +69,7 @@ void advect(int dim, int x, int y, RWStructuredBuffer<int> blocked, RWStructured
 void forces(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = float2(pix.x, pix.y);
-	advect(64, pos.x, pos.y, blocked, pressureWrite, pressure, dx, dy);
+	advect(shaderSizeX, pos.x, pos.y, blocked, pressureWrite, pressure, dx, dy);
 }
 
 #pragma kernel copyToWrite

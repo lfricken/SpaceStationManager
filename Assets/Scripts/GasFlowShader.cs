@@ -67,6 +67,8 @@ namespace Assets.Scripts
 		DataBuffer<float> dy;
 		DataBuffer<float> dyWrite;
 
+		int shaderSizeX;
+
 		#region Shader
 		public RenderTexture RenderTexture;
 		/// <summary>
@@ -109,6 +111,8 @@ namespace Assets.Scripts
 
 		void SetupShaders(Vector3Int resolution)
 		{
+			shaderSizeX = resolution.x;
+
 			pressure = new DataBuffer<float>(nameof(pressure), resolution);
 			pressureWrite = new DataBuffer<float>(nameof(pressureWrite), resolution);
 
@@ -144,6 +148,10 @@ namespace Assets.Scripts
 
 			// shader
 			shader = Resources.Load<ComputeShader>("gas");
+
+			{
+				shader.SetInt(nameof(shaderSizeX), shaderSizeX);
+			}
 
 			// copyToWrite
 			{
