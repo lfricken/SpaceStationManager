@@ -172,7 +172,7 @@ namespace Assets.Scripts
 			// shader
 			shader = Resources.Load<ComputeShader>("gas");
 
-			// forces
+			// disperse
 			{
 				forces = shader.FindKernel(nameof(forces));
 				tiles.SendTo(forces, shader);
