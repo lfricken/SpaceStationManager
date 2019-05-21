@@ -1,32 +1,84 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
-	struct PressureTile
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <typeparam name="ImplementingClass"></typeparam>
+	interface IApplyDelta<ImplementingClass>
 	{
-		public float pressure;
-		public int blocked;
+		/// <summary>
+		/// Adds the other variables to this instance.
+		/// </summary>
+		void ApplyDelta(ImplementingClass other);
 	}
 
-	class DataBuffer<Data>
+	struct PressureTile : IApplyDelta<PressureTile>
+	{
+		public float pressure;
+		private int blocked;
+
+		public bool Blocked
+		{
+			get { return blocked == 1; }
+			set { blocked = value ? 1 : 0; }
+		}
+
+		/// <summary>
+		/// Adds the other variables to this instance.
+		/// </summary>
+		public void ApplyDelta(PressureTile other)
+		{
+			pressure += other.pressure;
+			Blocked = other.Blocked;
+		}
+	}
+
+	class DataBuffer<Data> where Data : IApplyDelta<Data>
 	{
 		#region Buffer Data
 		ComputeBuffer gpuBuffer;
-		public Data[] cpuData; // todo: add public accessors to modify data
+		Data[] cpuData;
+		Dictionary<Vector2Int, Data> modifications;
 		readonly string BufferName;
 		#endregion
 
 		public DataBuffer(string bufferName, Vector3Int resolution)
 		{
+			modifications = new Dictionary<Vector2Int, Data>();
 			BufferName = bufferName;
 
 			cpuData = new Data[resolution.x * resolution.y];
 			gpuBuffer = new ComputeBuffer(cpuData.Length, Marshal.SizeOf(typeof(Data)));
 		}
 
+		int index(Vector2Int position)
+		{
+			return position.x + position.y * 256;
+		}
+
+		public void AddDelta(Vector2Int position, Data data)
+		{
+			if (modifications.ContainsKey(position))
+			{
+				modifications[position].ApplyDelta(data);
+			}
+			else
+			{
+				modifications[position] = data;
+			}
+		}
+
 		public void SendUpdatesToGpu()
 		{
+			gpuBuffer.GetData(cpuData);
+			foreach (var kvp in modifications)
+			{
+				cpuData[index(kvp.Key)].ApplyDelta(kvp.Value);
+			}
 			gpuBuffer.SetData(cpuData);
 		}
 
@@ -69,13 +121,31 @@ namespace Assets.Scripts
 		void SetupShaders(Vector3Int resolution)
 		{
 			tiles = new DataBuffer<PressureTile>("PressureTiles", resolution);
-			tiles.cpuData[1].blocked = 1;
-			tiles.cpuData[0].pressure = 1;
-			tiles.cpuData[2].pressure = 1;
-			tiles.cpuData[3].pressure = 1;
-			tiles.cpuData[63].blocked = 1;
-			tiles.cpuData[67].blocked = 1;
-			tiles.cpuData[323].blocked = 1;
+			PressureTile tile = new PressureTile();
+
+			tile.Blocked = true;
+			tile.pressure = 0;
+
+			for (int x = 0; x < resolution.x; x++)
+			{
+				tiles.AddDelta(new Vector2Int(x, 0), tile);
+				tiles.AddDelta(new Vector2Int(x, resolution.y - 1), tile);
+			}
+
+			for (int y = 0; y < resolution.y; y++)
+			{
+				tiles.AddDelta(new Vector2Int(0, y), tile);
+				tiles.AddDelta(new Vector2Int(resolution.x - 1, y), tile);
+			}
+
+
+			tiles.AddDelta(new Vector2Int(2, 3), tile);
+			tiles.AddDelta(new Vector2Int(3, 3), tile);
+
+			tile.Blocked = false;
+			tile.pressure = 1000;
+			tiles.AddDelta(new Vector2Int(1, 2), tile);
+			tiles.AddDelta(new Vector2Int(8, 8), tile);
 			tiles.SendUpdatesToGpu();
 
 			// shader

@@ -5,33 +5,26 @@ struct PressureTile
 	float pressure;
 	int blocked;
 };
-
-
+uint index(float2 pos)
+{
+	return pos.x + pos.y * 256;
+}
 RWStructuredBuffer<PressureTile> PressureTiles;
 
 RWTexture2D<float4> RenderTexture;
 
-uint index(uint2 pos)
-{
-	uint x;
-	uint y;
-	PressureTiles.GetDimensions(x, y);
-
-	return pos.x + pos.y * x;
-}
-
 float2 getContribution(float2 pos, float2 offset)
 {
 	PressureTile tile = PressureTiles[index(pos + offset)];
-	return float2(tile.pressure, tile.blocked);
+	return float2(tile.pressure, tile.blocked * -1 + 1);
 }
 
 #pragma kernel disperse
 [numthreads(16, 16, 1)]
 void disperse(uint3 pix : SV_DispatchThreadID)
 {
-	uint2 pos = uint2(pix.x, pix.y);
-	PressureTile tile = PressureTiles[index(pos.xy)];
+	float2 pos = float2(pix.x, pix.y);
+	PressureTile tile = PressureTiles[index(pos)];
 	if(tile.blocked)
 		return;
 
@@ -51,7 +44,7 @@ void disperse(uint3 pix : SV_DispatchThreadID)
 
 	sum.x /= sum.y;
 
-	PressureTiles[index(pos.xy)].pressure = 1;// sum.x;
+	PressureTiles[index(pos)].pressure = sum.x;
 }
 
 //Clear Texture
@@ -64,23 +57,56 @@ void disperse(uint3 pix : SV_DispatchThreadID)
 
 //Draw
 
+
+float4 gradient(float value)
+{
+	float min = 0;
+	float middle = 0.5;
+	float max = 1;
+	float4 color = float4(0, 0, 0, 1);
+
+	if(value == 0)
+	{
+		return float4(1, 1, 1, 1);
+	}
+
+	if(value > max)
+	{
+		color.r = 1;
+	}
+	else if(value > middle)
+	{
+		float between = (value - middle) / (max - middle);
+		color.r = between;
+		color.g = 1 - between;
+	}
+	else
+	{
+		float between = (value - min) / (middle - min);
+		color.g = between;
+		color.b = 1 - between;
+	}
+
+	return color;
+}
+
 #pragma kernel render
 [numthreads(16, 16, 1)]
 void render(uint3 pix : SV_DispatchThreadID)
 {
 	float4 c = float4(1, 0, 1, 1);
-	uint2 pos = uint2(pix.x, pix.y);
+	float2 pos = float2(pix.x, pix.y);
 
-	PressureTile tile = PressureTiles[index(pos.xy)];
+	PressureTile tile = PressureTiles[index(pos)];
 
 	if(tile.blocked)
 	{
 		c.rgb = 0;
 	}
-	//else
-	//{
-	//	c.gb = (tile.pressure * -1) + 1;
-	//}
+	else
+	{
+		c = gradient(tile.pressure);
+	}
 
 	RenderTexture[pos.xy] = c;
 }
