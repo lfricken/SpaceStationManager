@@ -77,7 +77,7 @@ float getContributionX(float2 pos, float2 offset)
 
 float2 getContribution(float2 pos, float2 offset)
 {
-	PressureTile tile = PressureTiles[index(pos + offset)];
+	PressureTile tile = PressureTilesWrite[index(pos + offset)];
 
 	float contrib = tile.pressure;
 
@@ -102,22 +102,23 @@ void disperse(uint3 pix : SV_DispatchThreadID)
 	// we expect this much to leave the tilee
 	//PressureTilesWrite[index(pos)].pressure -= tile.pressure * (tile.dl + tile.dr + tile.du + tile.dd);
 	float diff = 0.1;
-	float a = 0.2;// diff * 32 * 32;
+	float a = 1;// diff * 32 * 32;
 
-	float2 otherContributions = float2(0, 0);
+	float2 newPressure = float2(0, 0);
 
 
-	otherContributions += getContribution(pos, float2(1, 0));
-	otherContributions += getContribution(pos, float2(0, 1));
-	otherContributions += getContribution(pos, float2(-1, 0));
-	otherContributions += getContribution(pos, float2(0, -1));
+	newPressure += getContribution(pos, float2(1, 0));
+	newPressure += getContribution(pos, float2(0, 1));
+	newPressure += getContribution(pos, float2(-1, 0));
+	newPressure += getContribution(pos, float2(0, -1));
 
-	otherContributions.x -= otherContributions.y * tile.pressure;
-	otherContributions.x *= a;
+	newPressure.x *= a;
 
-	otherContributions.x += tile.pressure;
+	newPressure.x += tile.pressure;
 
-	PressureTilesWrite[index(pos)].pressure = otherContributions.x;
+	newPressure.x /= (1 + newPressure.y * a);
+
+	PressureTilesWrite[index(pos)].pressure = newPressure.x;
 
 }
 
