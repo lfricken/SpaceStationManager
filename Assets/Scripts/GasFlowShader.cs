@@ -21,11 +21,6 @@ namespace Assets.Scripts
 		public float pressure;
 		private int blocked;
 
-		float dr;
-		float dl;
-		float du;
-		float dd;
-
 		public bool Blocked
 		{
 			get { return blocked == 1; }
@@ -111,7 +106,7 @@ namespace Assets.Scripts
 
 		ComputeShader shader;
 		int forces;
-		int disperse;
+		int diffuse;
 		int render;
 		#endregion
 
@@ -182,9 +177,9 @@ namespace Assets.Scripts
 
 			// disperse
 			{
-				disperse = shader.FindKernel(nameof(disperse));
-				tiles.SendTo(disperse, shader);
-				writeTiles.SendTo(disperse, shader);
+				diffuse = shader.FindKernel(nameof(diffuse));
+				tiles.SendTo(diffuse, shader);
+				writeTiles.SendTo(diffuse, shader);
 			}
 
 			// render
@@ -201,7 +196,7 @@ namespace Assets.Scripts
 			int threadGroups = Resolution.x / numXYThreads;
 
 			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
-			shader.Dispatch(disperse, threadGroups, threadGroups, 1);
+			shader.Dispatch(diffuse, threadGroups, threadGroups, 1);
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
 		}
 	}

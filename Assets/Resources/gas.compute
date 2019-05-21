@@ -4,11 +4,6 @@ struct PressureTile
 {
 	float pressure;
 	int blocked;
-
-	float dr;
-	float dl;
-	float du;
-	float dd;
 };
 uint index(float2 pos)
 {
@@ -22,57 +17,14 @@ RWTexture2D<float4> RenderTexture;
 
 float2 getOutflow(float2 pos, float2 offset)
 {
-	PressureTile currentTile = PressureTiles[index(pos)];
-	PressureTile newTile = PressureTiles[index(pos + offset)];
 
-	// if offset is -1 and has more pressure, produce positive value
-	float delta = max(0, currentTile.pressure - newTile.pressure);
-
-	delta /= float(5);
-
-	return delta;
 }
 
 #pragma kernel forces
 [numthreads(16, 16, 1)]
 void forces(uint3 pix : SV_DispatchThreadID)
 {
-	float2 pos = float2(pix.x, pix.y);
-	PressureTile tile = PressureTiles[index(pos)];
-	if(tile.blocked)
-		return;
 
-	PressureTiles[index(pos)].dr += getOutflow(pos, float2(1, 0));
-	PressureTiles[index(pos)].dl += getOutflow(pos, float2(-1, 0));
-	PressureTiles[index(pos)].du += getOutflow(pos, float2(0, 1));
-	PressureTiles[index(pos)].dd += getOutflow(pos, float2(0, -1));
-}
-
-float getContributionX(float2 pos, float2 offset)
-{
-	PressureTile tile = PressureTiles[index(pos + offset)];
-
-	offset *= -1; // since we want to reverse the direction
-	float contrib = 0;
-	if(offset.x == 1 && offset.y == 0)
-	{
-		contrib = tile.dr;
-	}
-	else if(offset.x == -1 && offset.y == 0)
-	{
-		contrib = tile.dl;
-	}
-	else if(offset.x == 0 && offset.y == 1)
-	{
-		contrib = tile.du;
-	}
-	else if(offset.x == 0 && offset.y == -1)
-	{
-		contrib = tile.dd;
-	}
-	contrib *= tile.pressure;
-
-	return contrib;
 }
 
 float2 getContribution(float2 pos, float2 offset)
@@ -84,45 +36,39 @@ float2 getContribution(float2 pos, float2 offset)
 	return float2(contrib, (tile.blocked * -1) + 1);
 }
 
-#pragma kernel disperse
+#pragma kernel diffuse
 [numthreads(16, 16, 1)]
-void disperse(uint3 pix : SV_DispatchThreadID)
+void diffuse(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = float2(pix.x, pix.y);
 	PressureTile tile = PressureTiles[index(pos)];
 	PressureTilesWrite[index(pos)] = tile;
 
-
-	// TODO don't just return
+	// TODO don't just return, calc bounces!
 	if(tile.blocked)
 	{
 		return;
 	}
 
-	// we expect this much to leave the tilee
-	//PressureTilesWrite[index(pos)].pressure -= tile.pressure * (tile.dl + tile.dr + tile.du + tile.dd);
-	float diff = 0.1;
-	float a = 1;// diff * 32 * 32;
-
 	float2 newPressure = float2(0, 0);
 
+	// stable density solver
+	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);
+	float diffusion = 1;
 
 	newPressure += getContribution(pos, float2(1, 0));
 	newPressure += getContribution(pos, float2(0, 1));
 	newPressure += getContribution(pos, float2(-1, 0));
 	newPressure += getContribution(pos, float2(0, -1));
 
-	newPressure.x *= a;
-
+	newPressure.x *= diffusion;
 	newPressure.x += tile.pressure;
-
-	newPressure.x /= (1 + newPressure.y * a);
+	newPressure.x /= (1 + newPressure.y * diffusion);
 
 	PressureTilesWrite[index(pos)].pressure = newPressure.x;
-
 }
 
-float4 gradient(float value)
+float4 colorGradient(float value)
 {
 	float min = 0;
 	float middle = 0.5;
@@ -140,12 +86,14 @@ float4 gradient(float value)
 	}
 	else if(value > middle)
 	{
+		// bound the value to [min, max] as [0, 1]
 		float between = (value - middle) / (max - middle);
 		color.r = between;
 		color.g = 1 - between;
 	}
 	else
 	{
+		// bound the value to [min, max] as [0, 1]
 		float between = (value - min) / (middle - min);
 		color.g = between;
 		color.b = 1 - between;
@@ -171,7 +119,7 @@ void render(uint3 pix : SV_DispatchThreadID)
 	}
 	else
 	{
-		c = gradient(tile.pressure);
+		c = colorGradient(tile.pressure);
 	}
 
 	RenderTexture[pos.xy] = c;
