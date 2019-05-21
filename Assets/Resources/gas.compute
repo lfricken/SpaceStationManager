@@ -12,7 +12,7 @@ struct PressureTile
 };
 uint index(float2 pos)
 {
-	return pos.x + pos.y * 32;
+	return pos.x + pos.y * 64;
 }
 RWStructuredBuffer<PressureTile> PressureTilesWrite;
 RWStructuredBuffer<PressureTile> PressureTiles;

@@ -47,6 +47,7 @@ namespace Assets.Scripts
 		#region Buffer Data
 		ComputeBuffer gpuBuffer;
 		Data[] cpuData;
+		int xRes;
 		Dictionary<Vector2Int, Data> modifications;
 		readonly string BufferName;
 		#endregion
@@ -56,13 +57,14 @@ namespace Assets.Scripts
 			modifications = new Dictionary<Vector2Int, Data>();
 			BufferName = bufferName;
 
+			xRes = resolution.x;
 			cpuData = new Data[resolution.x * resolution.y];
 			gpuBuffer = new ComputeBuffer(cpuData.Length, Marshal.SizeOf(typeof(Data)));
 		}
 
 		int index(Vector2Int position)
 		{
-			return position.x + position.y * 32;
+			return position.x + position.y * xRes;
 		}
 
 		public void AddDelta(Vector2Int position, Data data)
@@ -115,7 +117,7 @@ namespace Assets.Scripts
 
 		public GasFlowGpu(Vector3Int resolution)
 		{
-			Resolution = resolution;
+			Resolution = new Vector3Int(resolution.x, resolution.y, resolution.z);
 
 			RenderTexture = new RenderTexture(resolution.x, resolution.y, resolution.z);
 			RenderTexture.enableRandomWrite = true;
