@@ -27,7 +27,7 @@ void forces(uint3 pix : SV_DispatchThreadID)
 
 }
 
-float2 getContribution(float2 pos, float2 offset)
+float2 getDiffuse(float2 pos, float2 offset)
 {
 	PressureTile tile = PressureTilesWrite[index(pos + offset)];
 
@@ -56,10 +56,10 @@ void diffuse(uint3 pix : SV_DispatchThreadID)
 	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);
 	float diffusion = 1;
 
-	newPressure += getContribution(pos, float2(1, 0));
-	newPressure += getContribution(pos, float2(0, 1));
-	newPressure += getContribution(pos, float2(-1, 0));
-	newPressure += getContribution(pos, float2(0, -1));
+	newPressure += getDiffuse(pos, float2(1, 0));
+	newPressure += getDiffuse(pos, float2(0, 1));
+	newPressure += getDiffuse(pos, float2(-1, 0));
+	newPressure += getDiffuse(pos, float2(0, -1));
 
 	newPressure.x *= diffusion;
 	newPressure.x += tile.pressure;
@@ -124,10 +124,3 @@ void render(uint3 pix : SV_DispatchThreadID)
 
 	RenderTexture[pos.xy] = c;
 }
-
-
-
-
-
-
-
