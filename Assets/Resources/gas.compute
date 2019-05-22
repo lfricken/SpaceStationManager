@@ -28,12 +28,6 @@ uint at(float x, float y)
 {
 	return x + y * shaderSizeX;
 }
-void SWAP(in out Array left, in out Array right)
-{
-	Array temp = left;
-	left = right;
-	right = temp;
-}
 float clampy(float val, int dim)
 {
 	if(val < 0.5)
@@ -43,35 +37,14 @@ float clampy(float val, int dim)
 	return val;
 }
 
-void project(float2 pos, float dims, Array velX, Array velY, Array p, Array div)
-{
-	float h;
-	h = 1.0f / dims;
-
-	div[at(pos.x, pos.y)] = -0.5f * h * (velX[at(pos.x + 1, pos.y)] - velX[at(pos.x - 1, pos.y)] +
-		velY[at(pos.x, pos.y + 1)] - velY[at(pos.x, pos.y - 1)]);
-	p[at(pos.x, pos.y)] = 0;
-
-	//set_bnd(dims, 0, div); set_bnd(dims, 0, p);
-
-	p[at(pos.x, pos.y)] = (div[at(pos.x, pos.y)] + p[at(pos.x - 1, pos.y)] + p[at(pos.x + 1, pos.y)] +
-		p[at(pos.x, pos.y - 1)] + p[at(pos.x, pos.y + 1)]) / 4;
-
-	//set_bnd(dims, 0, p);
-
-	velX[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
-	velY[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
-
-	//set_bnd(dims, 1, dx); set_bnd(dims, 2, dy);
-}
-
-void advect(float2 pos, int dim, int boundary, Array newPressure, Array oldPressure, Array velX, Array velY, float dt)
+void advect(int dim, int2 pos, int boundary, Array newPressure, Array oldPressure, Array velX, Array velY)
 {
 	//if(blocked[at(x, y)])
 	//{
 	//	return;
 	//}
 
+	float dt = 1;
 	int x0, y0, x1, y1;
 	float xStart, yStart;
 	float s0, t0, s1, t1; // interpolations.
@@ -94,8 +67,6 @@ void advect(float2 pos, int dim, int boundary, Array newPressure, Array oldPress
 	t0 = 1 - t1;
 
 	newPressure[at(pos.x, pos.y)] = (s0 * (t0 * oldPressure[at(x0, y0)] + t1 * oldPressure[at(x0, y1)]) + s1 * (t0 * oldPressure[at(x1, y0)] + t1 * oldPressure[at(x1, y1)]));
-
-	//set_bnd.
 }
 
 float2 getDiffuse(float2 pos, float2 offset, Array newPressure)
@@ -123,8 +94,6 @@ void diffuse(float2 pos, int boundary, Array newPressure, Array oldPressure, flo
 	np.x /= (1 + np.y * a);
 
 	newPressure[at(pos)] = np.x;
-
-	//set_bnd
 }
 
 float4 colorGradient(float value)
@@ -166,28 +135,18 @@ void dens_step(float2 pos, Array x, Array x0, Array u, Array v, float viscosity,
 	Array temp;
 	//add_source(N, x, x0, dt);
 
-		//swap
+	//swap
 	temp = x;
 	x = x0;
 	x0 = temp;
+
 	diffuse(pos, 0, x, x0, viscosity, dt);
 
 	//swap
 	temp = x;
 	x = x0;
 	x0 = temp;
-	advect(shaderSizeX, pos, 0, x, x0, u, v, dt);
-}
-
-void vel_step(float2 pos, int N, Array u, Array v, Array u0, Array v0, float visc, float dt)
-{
-	//add_source(N, u, u0, dt); add_source(N, v, v0, dt);
-	SWAP(u0, u); diffuse(N, 1, u, u0, visc, dt);
-	SWAP(v0, v); diffuse(N, 2, v, v0, visc, dt);
-	project(pos, N, u, v, u0, v0);
-	SWAP(u0, u); SWAP(v0, v);
-	advect(pos, N, 1, u, u0, u0, v0, dt); advect(pos, N, 2, v, v0, u0, v0, dt);
-	project(pos, N, u, v, u0, v0);
+	advect(shaderSizeX, pos, 0, x, x0, u, v);
 }
 
 #pragma kernel doStep
@@ -198,7 +157,7 @@ void doStep(uint3 pix : SV_DispatchThreadID)
 	float p = pressure[at(pos)];
 	int isBlocked = blocked[at(pos)];
 
-	// TODO don't just return, calc bounces.
+	// TODO don't just return, calc bounces
 	if(isBlocked)
 	{
 		return;
