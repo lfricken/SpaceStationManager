@@ -80,7 +80,7 @@ namespace Assets.Scripts
 		int copyToWrite;
 		int copyToRead;
 		int forces;
-		int diffuse;
+		int diffuseHandle;
 		int render;
 		#endregion
 
@@ -203,18 +203,18 @@ namespace Assets.Scripts
 
 			// disperse
 			{
-				diffuse = shader.FindKernel(nameof(diffuse));
-				pressure.SendTo(diffuse, shader);
-				pressureWrite.SendTo(diffuse, shader);
+				diffuseHandle = shader.FindKernel(nameof(diffuseHandle));
+				pressure.SendTo(diffuseHandle, shader);
+				pressureWrite.SendTo(diffuseHandle, shader);
 
-				blocked.SendTo(diffuse, shader);
-				blockedWrite.SendTo(diffuse, shader);
+				blocked.SendTo(diffuseHandle, shader);
+				blockedWrite.SendTo(diffuseHandle, shader);
 
-				dx.SendTo(diffuse, shader);
-				dxWrite.SendTo(diffuse, shader);
+				dx.SendTo(diffuseHandle, shader);
+				dxWrite.SendTo(diffuseHandle, shader);
 
-				dy.SendTo(diffuse, shader);
-				dyWrite.SendTo(diffuse, shader);
+				dy.SendTo(diffuseHandle, shader);
+				dyWrite.SendTo(diffuseHandle, shader);
 			}
 
 			// render
@@ -241,13 +241,14 @@ namespace Assets.Scripts
 
 			shader.Dispatch(copyToWrite, threadGroups, threadGroups, 1);
 
-			shader.Dispatch(diffuse, threadGroups, threadGroups, 1);
+			shader.Dispatch(diffuseHandle, threadGroups, threadGroups, 1);
 			shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
 
 			shader.Dispatch(forces, threadGroups, threadGroups, 1);
 			shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
 
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
-		}
+		}
+
 	}
 }

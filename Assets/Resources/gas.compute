@@ -32,6 +32,47 @@ float clampy(float val, int dim)
 	return val;
 }
 
+void set_bnd(int boundary, RWStructuredBuffer<float> tiles)
+{
+	int dims = shaderSizeX;
+	int i;
+	for(i = 1; i <= dims; i++)
+	{
+		tiles[at(0, i)] = (boundary == 1) ? -tiles[at(1, i)] : tiles[at(1, i)];
+		tiles[at(dims + 1, i)] = boundary == 1 ? -tiles[at(dims, i)] : tiles[at(dims, i)];
+		tiles[at(i, 0)] = boundary == 2 ? -tiles[at(i, 1)] : tiles[at(i, 1)];
+		tiles[at(i, dims + 1)] = boundary == 2 ? -tiles[at(i, dims)] : tiles[at(i, dims)];
+	}
+	tiles[at(0, 0)] = 0.5f * (tiles[at(1, 0)] + tiles[at(0, 1)]);
+	tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
+	tiles[at(dims + 1, 0)] = 0.5f * (tiles[at(dims, 0)] + tiles[at(dims + 1, 1)]);
+	tiles[at(dims + 1, dims + 1)] = 0.5f * (tiles[at(dims, dims + 1)] + tiles[at(dims + 1, dims)]);
+}
+
+void project(float dims, float posx, float posy, RWStructuredBuffer<float> velX, RWStructuredBuffer<float> velY, RWStructuredBuffer<float> velX0, RWStructuredBuffer<float> velY0)
+{
+	float h;
+	h = 1.0f / dims;
+
+	velY0[at(posx, posy)] = -0.5f * h * (velX[at(posx + 1, posy)] - velX[at(posx - 1, posy)] +
+		velY[at(posx, posy + 1)] - velY[at(posx, posy - 1)]);
+	velX0[at(posx, posy)] = 0;
+
+	set_bnd(0, velY0); 
+	set_bnd(0, velX0);
+
+	velX0[at(posx, posy)] = (velY0[at(posx, posy)] + velX0[at(posx - 1, posy)] + velX0[at(posx + 1, posy)] +
+		velX0[at(posx, posy - 1)] + velX0[at(posx, posy + 1)]) / 4;
+
+	set_bnd(0, velX0);
+
+
+	velX[at(posx, posy)] -= 0.5f * (velX0[at(posx + 1, posy)] - velX0[at(posx - 1, posy)]) / h;
+	velY[at(posx, posy)] -= 0.5f * (velX0[at(posx, posy + 1)] - velX0[at(posx, posy - 1)]) / h;
+
+	set_bnd(1, velX); set_bnd(2, velY);
+}
+
 void advect(int dim, int x, int y, RWStructuredBuffer<int> blocked, RWStructuredBuffer<float> newPressure, RWStructuredBuffer<float> oldPressure, RWStructuredBuffer<float> velX, RWStructuredBuffer<float> velY)
 {
 	if(blocked[at(x, y)])
@@ -42,7 +83,7 @@ void advect(int dim, int x, int y, RWStructuredBuffer<int> blocked, RWStructured
 	float dt = 1;
 	int x0, y0, x1, y1;
 	float xStart, yStart;
-	float s0, t0, s1, t1; // interpolations
+	float s0, t0, s1, t1; // interpolation
 	float deltaTime = dt;
 
 	xStart = x - deltaTime * velX[at(x, y)];
@@ -94,45 +135,50 @@ void copyToRead(uint3 pix : SV_DispatchThreadID)
 	dy[at(pos)] = dyWrite[at(pos)];
 }
 
-float2 getDiffuse(float2 pos, float2 offset)
+float2 getDiffuse(float2 pos, float2 offset, RWStructuredBuffer<float> old)
 {
 	int newPos = at(pos + offset);
-	float p = pressureWrite[newPos];
-	int notBlocked = (blocked[newPos] * -1) + 1;
+	float p = old[newPos];
+	//int notBlocked = (blocked[newPos] * -1) + 1;
 
-	return float2(p, notBlocked);
+	return float2(p, 1);
 }
 
-#pragma kernel diffuse
+void diffuse(float2 pos, int boundary, RWStructuredBuffer<float> newPressure, RWStructuredBuffer<float> oldPressure, float viscosity)
+{
+	float2 np = float2(0, 0);
+
+	// stable density solver
+	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);
+
+	np += getDiffuse(pos, float2(1, 0), oldPressure);
+	np += getDiffuse(pos, float2(0, 1), oldPressure);
+	np += getDiffuse(pos, float2(-1, 0), oldPressure);
+	np += getDiffuse(pos, float2(0, -1), oldPressure);
+
+	np.x *= viscosity;
+	np.x += oldPressure[at(pos)];
+	np.x /= (1 + np.y * viscosity);
+
+	newPressure[at(pos)] = np.x;
+
+	//set_bnd(boundary, newPressure);
+}
+
+#pragma kernel diffuseHandle
 [numthreads(16, 16, 1)]
-void diffuse(uint3 pix : SV_DispatchThreadID)
+void diffuseHandle(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = float2(pix.x, pix.y);
-	float p = pressure[at(pos)];
 	int isBlocked = blocked[at(pos)];
 
-	// TODO don't just return, calc bounces
+	// TODO don't just return, calc bounces.
 	if(isBlocked)
 	{
 		return;
 	}
 
-	float2 newPressure = float2(0, 0);
-
-	// stable density solver
-	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);//
-	float diffusion = 1;
-
-	newPressure += getDiffuse(pos, float2(1, 0));
-	newPressure += getDiffuse(pos, float2(0, 1));
-	newPressure += getDiffuse(pos, float2(-1, 0));
-	newPressure += getDiffuse(pos, float2(0, -1));
-
-	newPressure.x *= diffusion;
-	newPressure.x += p;
-	newPressure.x /= (1 + newPressure.y * diffusion);
-
-	pressureWrite[at(pos)] = newPressure.x;
+	diffuse(pos, 0, pressure, pressureWrite, 1);
 }
 
 float4 colorGradient(float value)
@@ -168,6 +214,7 @@ float4 colorGradient(float value)
 
 	return color;
 }
+
 
 #pragma kernel render
 [numthreads(16, 16, 1)]

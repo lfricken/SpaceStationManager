@@ -33,42 +33,42 @@ public class GameManager : MonoBehaviour
 		return val;
 	}
 
-	void project(float dims, float[] dx, float[] dy, float[] p, float[] div)
+	void project(float dims, float[] velX, float[] velY, float[] velX0, float[] velY0)
 	{
-		int i, j, k;
+		int posx, posy, k;
 		float h;
 		h = 1.0f / dims;
-		for (i = 1; i <= dims; i++)
+		for (posx = 1; posx <= dims; posx++)
 		{
-			for (j = 1; j <= dims; j++)
+			for (posy = 1; posy <= dims; posy++)
 			{
-				div[at(i, j)] = -0.5f * h * (dx[at(i + 1, j)] - dx[at(i - 1, j)] +
-				dy[at(i, j + 1)] - dy[at(i, j - 1)]);
-				p[at(i, j)] = 0;
+				velY0[at(posx, posy)] = -0.5f * h * (velX[at(posx + 1, posy)] - velX[at(posx - 1, posy)] +
+				velY[at(posx, posy + 1)] - velY[at(posx, posy - 1)]);
+				velX0[at(posx, posy)] = 0;
 			}
 		}
-		set_bnd(dims, 0, div); set_bnd(dims, 0, p);
+		set_bnd(dims, 0, velY0); set_bnd(dims, 0, velX0);
 		for (k = 0; k < 20; k++)
 		{
-			for (i = 1; i <= dims; i++)
+			for (posx = 1; posx <= dims; posx++)
 			{
-				for (j = 1; j <= dims; j++)
+				for (posy = 1; posy <= dims; posy++)
 				{
-					p[at(i, j)] = (div[at(i, j)] + p[at(i - 1, j)] + p[at(i + 1, j)] +
-					 p[at(i, j - 1)] + p[at(i, j + 1)]) / 4;
+					velX0[at(posx, posy)] = (velY0[at(posx, posy)] + velX0[at(posx - 1, posy)] + velX0[at(posx + 1, posy)] +
+					 velX0[at(posx, posy - 1)] + velX0[at(posx, posy + 1)]) / 4;
 				}
 			}
-			set_bnd(dims, 0, p);
+			set_bnd(dims, 0, velX0);
 		}
-		for (i = 1; i <= dims; i++)
+		for (posx = 1; posx <= dims; posx++)
 		{
-			for (j = 1; j <= dims; j++)
+			for (posy = 1; posy <= dims; posy++)
 			{
-				dx[at(i, j)] -= 0.5f * (p[at(i + 1, j)] - p[at(i - 1, j)]) / h;
-				dy[at(i, j)] -= 0.5f * (p[at(i, j + 1)] - p[at(i, j - 1)]) / h;
+				velX[at(posx, posy)] -= 0.5f * (velX0[at(posx + 1, posy)] - velX0[at(posx - 1, posy)]) / h;
+				velY[at(posx, posy)] -= 0.5f * (velX0[at(posx, posy + 1)] - velX0[at(posx, posy - 1)]) / h;
 			}
 		}
-		set_bnd(dims, 1, dx); set_bnd(dims, 2, dy);
+		set_bnd(dims, 1, velX); set_bnd(dims, 2, velY);
 	}
 
 	void set_bnd(float _dims, int boundary, float[] tiles)
@@ -86,7 +86,8 @@ public class GameManager : MonoBehaviour
 		tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
 		tiles[at(dims + 1, 0)] = 0.5f * (tiles[at(dims, 0)] + tiles[at(dims + 1, 1)]);
 		tiles[at(dims + 1, dims + 1)] = 0.5f * (tiles[at(dims, dims + 1)] + tiles[at(dims + 1, dims)]);
-	}
+	}
+
 
 	void advect(int dim, float[] newPressure, float[] oldPressure, float[] velX, float[] velY, float dt)
 	{
