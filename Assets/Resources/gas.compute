@@ -46,7 +46,7 @@ float clampy(float val, int dim)
 void set_bnd(float2 pos, int boundary, Array tiles)
 {
 	int dims = shaderSizeX;
-	//int i = useX ? pos.x : pos.y;
+	//int i = useX ? pos.x : pos.y;//
 
 	if(pos.x == 1)
 	{
@@ -65,11 +65,15 @@ void set_bnd(float2 pos, int boundary, Array tiles)
 		tiles[at(pos.x, dims + 1)] = boundary == 2 ? -tiles[at(pos.x, dims)] : tiles[at(pos.x, dims)];
 	}
 
-	//tiles[at(0, 0)] = 0.5f * (tiles[at(1, 0)] + tiles[at(0, 1)]);
-	//tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
-	//tiles[at(dims + 1, 0)] = 0.5f * (tiles[at(dims, 0)] + tiles[at(dims + 1, 1)]);
-	//tiles[at(dims + 1, dims + 1)] = 0.5f * (tiles[at(dims, dims + 1)] + tiles[at(dims + 1, dims)]);
-}
+	if((pos.x == 0 || pos.y == 0) && (pos.x == shaderSizeX-1 || pos.y == shaderSizeX-1))
+	{
+		tiles[at(0, 0)] = 0.5f * (tiles[at(1, 0)] + tiles[at(0, 1)]);
+		tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
+		tiles[at(dims + 1, 0)] = 0.5f * (tiles[at(dims, 0)] + tiles[at(dims + 1, 1)]);
+		tiles[at(dims + 1, dims + 1)] = 0.5f * (tiles[at(dims, dims + 1)] + tiles[at(dims + 1, dims)]);
+	}
+}
+
 
 void project(float2 pos, float dims, Array velX, Array velY, Array p, Array div)
 {
@@ -230,8 +234,8 @@ void doStep(uint3 pix : SV_DispatchThreadID)
 		return;
 	}
 
-	float viscosity = 1;
-	float dt = 1;
+	float viscosity = 2;
+	float dt = 2;
 
 	vel_step(pos, shaderSizeX, dx, dy, dxWrite, dyWrite, viscosity, dt);
 	dens_step(pos, pressureWrite, pressure, dx, dy, viscosity, dt);
@@ -241,13 +245,14 @@ void doStep(uint3 pix : SV_DispatchThreadID)
 [numthreads(16, 16, 1)]
 void render(uint3 pix : SV_DispatchThreadID)
 {
+	if(pix.x == 0 || pix.y == 0)
+		return;
+
 	float4 c = float4(1, 0, 1, 1);
 	float2 pos = float2(pix.x, pix.y);
 
 	float p = pressure[at(pos)];
 	int isBlocked = blocked[at(pos)];
-
-	InterlockedAdd(blocked[0], p * 10000);
 
 	if(isBlocked)
 	{
@@ -261,3 +266,10 @@ void render(uint3 pix : SV_DispatchThreadID)
 	RenderTexture[pos.xy] = c;
 }
 
+//
+//#pragma kernel clear
+//[numthreads(16, 16, 1)]
+//void clear(uint3 pix : SV_DispatchThreadID)
+//{
+//	blocked[0] = 0;
+//}

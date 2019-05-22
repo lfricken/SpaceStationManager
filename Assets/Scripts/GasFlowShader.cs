@@ -82,6 +82,7 @@ namespace Assets.Scripts
 		int forces;
 		int doStep;
 		int render;
+		int clear;
 		#endregion
 
 		public GasFlowGpu(Vector3Int resolution)
@@ -125,16 +126,16 @@ namespace Assets.Scripts
 			blocked = new DataBuffer<int>(nameof(blocked), resolution);
 			blockedWrite = new DataBuffer<int>(nameof(blockedWrite), resolution);
 
-			for (int x = 0; x < resolution.x; x++)
-			{
-				blocked.AddDelta(new Vector2Int(x, 0), 1);
-				blocked.AddDelta(new Vector2Int(x, resolution.y - 1), 1);
-			}
-			for (int y = 0; y < resolution.y; y++)
-			{
-				blocked.AddDelta(new Vector2Int(0, y), 1);
-				blocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
-			}
+			//for (int x = 0; x < resolution.x; x++)
+			//{
+			//	blocked.AddDelta(new Vector2Int(x, 0), 1);
+			//	blocked.AddDelta(new Vector2Int(x, resolution.y - 1), 1);
+			//}
+			//for (int y = 0; y < resolution.y; y++)
+			//{
+			//	blocked.AddDelta(new Vector2Int(0, y), 1);
+			//	blocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
+			//}
 
 
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
@@ -143,7 +144,7 @@ namespace Assets.Scripts
 			ApplyDelta(new Vector2Int(1, 1), new Vector2Int(16, 16), 10f, dx);
 			dx.SendUpdatesToGpu();
 
-			pressure.AddDelta(new Vector2Int(15, 15), 600f);
+			pressure.AddDelta(new Vector2Int(15, 15), 1090f);
 			pressure.SendUpdatesToGpu();
 
 			// shader
@@ -153,20 +154,11 @@ namespace Assets.Scripts
 				shader.SetInt(nameof(shaderSizeX), shaderSizeX);
 			}
 
-			//// copyToWrite
+			// clear
 			//{
-			//	copyToWrite = shader.FindKernel(nameof(copyToWrite));
-			//	pressure.SendTo(copyToWrite, shader);
-			//	pressureWrite.SendTo(copyToWrite, shader);
-
+			//	clear = shader.FindKernel(nameof(clear));
 			//	blocked.SendTo(copyToWrite, shader);
 			//	blockedWrite.SendTo(copyToWrite, shader);
-
-			//	dx.SendTo(copyToWrite, shader);
-			//	dxWrite.SendTo(copyToWrite, shader);
-
-			//	dy.SendTo(copyToWrite, shader);
-			//	dyWrite.SendTo(copyToWrite, shader);
 			//}
 
 			//// copyToRead
@@ -246,6 +238,7 @@ namespace Assets.Scripts
 
 			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
 			//shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
+
 
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
 		}
