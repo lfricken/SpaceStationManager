@@ -20,23 +20,19 @@ uint at(float2 pos)
 	return pos.x + pos.y * shaderSizeX;
 }
 
-float2 getDiffuse(float2 pos, float2 offset)
+float2 getDiffuse(float2 pos, float2 offset, Array newPressure)
 {
-	PressureTile tile = PressureTilesWrite[at(pos + offset)];
+	PressureTile tile = newPressure[at(pos + offset)];
 
-	float contrib = tile.pressure;
-
-	return float2(contrib, (tile.blocked * -1) + 1);
+	return float2(tile.pressure, (tile.blocked * -1) + 1);
 }
 
 void diffuse2(float2 pos, Array newPressure, Array oldPressure)
 {
 	PressureTile tile = oldPressure[at(pos)];
-	newPressure[at(pos)] = tile;
 
 	oldPressure[at(pos)].sum = 0;
 	newPressure[at(pos)].sum = 0;
-
 
 	// TODO don't just return, calc bounces
 	if(tile.blocked)
@@ -48,12 +44,12 @@ void diffuse2(float2 pos, Array newPressure, Array oldPressure)
 
 	// stable density solver
 	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);
-	float diffusion = 1;
+	float diffusion = 0.1;
 
-	pressure += getDiffuse(pos, float2(1, 0));
-	pressure += getDiffuse(pos, float2(0, 1));
-	pressure += getDiffuse(pos, float2(-1, 0));
-	pressure += getDiffuse(pos, float2(0, -1));
+	pressure += getDiffuse(pos, float2(1, 0), newPressure);
+	pressure += getDiffuse(pos, float2(0, 1), newPressure);
+	pressure += getDiffuse(pos, float2(-1, 0), newPressure);
+	pressure += getDiffuse(pos, float2(0, -1), newPressure);
 
 	pressure.x *= diffusion;
 	pressure.x += tile.pressure;
@@ -68,6 +64,7 @@ void diffuse(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = float2(pix.x, pix.y);
 	diffuse2(pos, PressureTilesWrite, PressureTiles);
+	diffuse2(pos, PressureTiles, PressureTilesWrite);
 }
 
 float4 colorGradient(float value)
@@ -108,11 +105,9 @@ float4 colorGradient(float value)
 [numthreads(16, 16, 1)]
 void render(uint3 pix : SV_DispatchThreadID)
 {
-	float4 c = float4(1, 0, 1, 1);
 	float2 pos = float2(pix.x, pix.y);
+	float4 c = float4(1, 0, 1, 1);
 
-	// copy the write to the read
-	PressureTiles[at(pos)] = PressureTilesWrite[at(pos)];
 	PressureTile tile = PressureTiles[at(pos)];
 
 	if(tile.blocked)
@@ -127,4 +122,12 @@ void render(uint3 pix : SV_DispatchThreadID)
 	RenderTexture[pos.xy] = c;
 
 	InterlockedAdd(PressureTilesWrite[at(float2(0, 0))].sum, tile.pressure * 1000);
+}
+
+#pragma kernel initialCopy
+[numthreads(16, 16, 1)]
+void initialCopy(uint3 pix : SV_DispatchThreadID)
+{
+	float2 pos = float2(pix.x, pix.y);
+	PressureTilesWrite[at(pos)] = PressureTiles[at(pos)];
 }

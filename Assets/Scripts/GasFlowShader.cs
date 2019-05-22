@@ -101,6 +101,7 @@ namespace Assets.Scripts
 		DataBuffer<PressureTile> writeTiles;
 
 		int shaderSizeX;
+		int threadGroups;
 		#region Shader
 		public RenderTexture RenderTexture;
 		/// <summary>
@@ -145,6 +146,7 @@ namespace Assets.Scripts
 		void SetupShaders(Vector3Int resolution)
 		{
 			shaderSizeX = resolution.x;
+			threadGroups = Resolution.x / numXYThreads;
 			tiles = new DataBuffer<PressureTile>("PressureTiles", resolution);
 			writeTiles = new DataBuffer<PressureTile>("PressureTilesWrite", resolution);
 			PressureTile tile = new PressureTile();
@@ -190,16 +192,20 @@ namespace Assets.Scripts
 				writeTiles.SendTo(render, shader);
 				shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
 			}
+
+			// initial copy
+			int initialCopy = shader.FindKernel(nameof(initialCopy));
+			tiles.SendTo(initialCopy, shader);
+			writeTiles.SendTo(initialCopy, shader);
+			shader.Dispatch(initialCopy, threadGroups, threadGroups, 1);
 		}
 
 		public void Tick()
 		{
-			int threadGroups = Resolution.x / numXYThreads;
 
 			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
 			shader.Dispatch(diffuse, threadGroups, threadGroups, 1);
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
-
 
 			Debug.Log(writeTiles.SendUpdatesToGpu().sum);
 		}
