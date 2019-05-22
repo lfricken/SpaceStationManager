@@ -248,6 +248,7 @@ namespace Assets.Scripts
 			//shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
 
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
-		}
+		}
+
 	}
 }
