@@ -270,6 +270,12 @@
     <Reference Include="nunit.framework">
       <HintPath>D:/programs/Unity/2019.1.1f1/Editor/Data/UnityExtensions/Unity/TestRunner/net35/unity-custom/nunit.framework.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>C:/dev/SpaceStationManager/Assets/Dependencies/bin/UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.SharedInternalsModule">
+      <HintPath>C:/dev/SpaceStationManager/Assets/Dependencies/bin/UnityEngine.SharedInternalsModule.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.Analytics.Editor">
       <HintPath>C:/dev/SpaceStationManager/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Editor.dll</HintPath>
     </Reference>
@@ -278,15 +284,6 @@
     </Reference>
     <Reference Include="Unity.Analytics.Tracker">
       <HintPath>C:/dev/SpaceStationManager/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Tracker.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.SharedInternalsModule">
-      <HintPath>C:/dev/SpaceStationManager/Assets/Dependencies/bin/UnityEngine.SharedInternalsModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>C:/dev/SpaceStationManager/Assets/Dependencies/bin/UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="GasFlow">
-      <HintPath>C:/dev/SpaceStationManager/Assets/Dependencies/bin/GasFlow.dll</HintPath>
     </Reference>
     <Reference Include="netstandard">
       <HintPath>D:/programs/Unity/2019.1.1f1/Editor/Data/NetStandard/ref/2.0.0/netstandard.dll</HintPath>

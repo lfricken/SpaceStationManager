@@ -4,32 +4,24 @@ struct PressureTile
 {
 	float pressure;
 	int blocked;
+	int sum;
 };
-uint index(float2 pos)
-{
-	return pos.x + pos.y * 64;
-}
 RWStructuredBuffer<PressureTile> PressureTilesWrite;
 RWStructuredBuffer<PressureTile> PressureTiles;
 
+RWStructuredBuffer<int> total;
+
 RWTexture2D<float4> RenderTexture;
+int shaderSizeX;
 
-
-float2 getOutflow(float2 pos, float2 offset)
+uint at(float2 pos)
 {
-
-}
-
-#pragma kernel forces
-[numthreads(16, 16, 1)]
-void forces(uint3 pix : SV_DispatchThreadID)
-{
-
+	return pos.x + pos.y * shaderSizeX;
 }
 
 float2 getDiffuse(float2 pos, float2 offset)
 {
-	PressureTile tile = PressureTilesWrite[index(pos + offset)];
+	PressureTile tile = PressureTilesWrite[at(pos + offset)];
 
 	float contrib = tile.pressure;
 
@@ -41,10 +33,14 @@ float2 getDiffuse(float2 pos, float2 offset)
 void diffuse(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = float2(pix.x, pix.y);
-	PressureTile tile = PressureTiles[index(pos)];
-	PressureTilesWrite[index(pos)] = tile;
+	PressureTile tile = PressureTiles[at(pos)];
+	PressureTilesWrite[at(pos)] = tile;
 
-	// TODO don't just return, calc bounces!
+	PressureTiles[at(pos)].sum = 0;
+	PressureTilesWrite[at(pos)].sum = 0;
+
+
+	// TODO don't just return, calc bounces
 	if(tile.blocked)
 	{
 		return;
@@ -65,7 +61,7 @@ void diffuse(uint3 pix : SV_DispatchThreadID)
 	newPressure.x += tile.pressure;
 	newPressure.x /= (1 + newPressure.y * diffusion);
 
-	PressureTilesWrite[index(pos)].pressure = newPressure.x;
+	PressureTilesWrite[at(pos)].pressure = newPressure.x;
 }
 
 float4 colorGradient(float value)
@@ -110,8 +106,8 @@ void render(uint3 pix : SV_DispatchThreadID)
 	float2 pos = float2(pix.x, pix.y);
 
 	// copy the write to the read
-	PressureTiles[index(pos)] = PressureTilesWrite[index(pos)];
-	PressureTile tile = PressureTiles[index(pos)];
+	PressureTiles[at(pos)] = PressureTilesWrite[at(pos)];
+	PressureTile tile = PressureTiles[at(pos)];
 
 	if(tile.blocked)
 	{
@@ -123,4 +119,6 @@ void render(uint3 pix : SV_DispatchThreadID)
 	}
 
 	RenderTexture[pos.xy] = c;
+
+	InterlockedAdd(PressureTilesWrite[at(float2(0, 0))].sum, tile.pressure * 1000);
 }

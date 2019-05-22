@@ -21,6 +21,8 @@ namespace Assets.Scripts
 		public float pressure;
 		private int blocked;
 
+		public int sum;
+
 		public bool Blocked
 		{
 			get { return blocked == 1; }
@@ -74,7 +76,7 @@ namespace Assets.Scripts
 			}
 		}
 
-		public void SendUpdatesToGpu()
+		public Data SendUpdatesToGpu()
 		{
 			gpuBuffer.GetData(cpuData);
 			foreach (var kvp in modifications)
@@ -82,6 +84,7 @@ namespace Assets.Scripts
 				cpuData[index(kvp.Key)].ApplyDelta(kvp.Value);
 			}
 			gpuBuffer.SetData(cpuData);
+			return cpuData[0];
 		}
 
 		public void SendTo(int handle, ComputeShader shader)
@@ -97,6 +100,7 @@ namespace Assets.Scripts
 		DataBuffer<PressureTile> tiles;
 		DataBuffer<PressureTile> writeTiles;
 
+		int shaderSizeX;
 		#region Shader
 		public RenderTexture RenderTexture;
 		/// <summary>
@@ -140,6 +144,7 @@ namespace Assets.Scripts
 
 		void SetupShaders(Vector3Int resolution)
 		{
+			shaderSizeX = resolution.x;
 			tiles = new DataBuffer<PressureTile>("PressureTiles", resolution);
 			writeTiles = new DataBuffer<PressureTile>("PressureTilesWrite", resolution);
 			PressureTile tile = new PressureTile();
@@ -162,19 +167,15 @@ namespace Assets.Scripts
 			Block(new Vector2Int(10, 16), new Vector2Int(20, 16));
 
 			tile.Blocked = false;
-			tile.pressure = 724;
-			tiles.AddDelta(new Vector2Int(14, 14), tile);
+			tile.pressure = 205f;
+			tiles.AddDelta(new Vector2Int(18, 18), tile);
 			tiles.SendUpdatesToGpu();
 
 			// shader
 			shader = Resources.Load<ComputeShader>("gas");
 
-			// forces
-			{
-				forces = shader.FindKernel(nameof(forces));
-				tiles.SendTo(forces, shader);
-			}
-
+			shader.SetInt(nameof(shaderSizeX), shaderSizeX);
+			
 			// disperse
 			{
 				diffuse = shader.FindKernel(nameof(diffuse));
@@ -198,6 +199,9 @@ namespace Assets.Scripts
 			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
 			shader.Dispatch(diffuse, threadGroups, threadGroups, 1);
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
+
+
+			Debug.Log(writeTiles.SendUpdatesToGpu().sum);
 		}
 	}
 }
