@@ -33,42 +33,27 @@ public class GameManager : MonoBehaviour
 		return val;
 	}
 
-	void project(float dims, float[] dx, float[] dy, float[] p, float[] div)
+	void project(float dims, Vector2Int pos, float[] velX, float[] velY, float[] p, float[] div)
 	{
-		int i, j, k;
+		int k;
 		float h;
 		h = 1.0f / dims;
-		for (i = 1; i <= dims; i++)
-		{
-			for (j = 1; j <= dims; j++)
-			{
-				div[at(i, j)] = -0.5f * h * (dx[at(i + 1, j)] - dx[at(i - 1, j)] +
-				dy[at(i, j + 1)] - dy[at(i, j - 1)]);
-				p[at(i, j)] = 0;
-			}
-		}
-		set_bnd(dims, 0, div); set_bnd(dims, 0, p);
-		for (k = 0; k < 20; k++)
-		{
-			for (i = 1; i <= dims; i++)
-			{
-				for (j = 1; j <= dims; j++)
-				{
-					p[at(i, j)] = (div[at(i, j)] + p[at(i - 1, j)] + p[at(i + 1, j)] +
-					 p[at(i, j - 1)] + p[at(i, j + 1)]) / 4;
-				}
-			}
-			set_bnd(dims, 0, p);
-		}
-		for (i = 1; i <= dims; i++)
-		{
-			for (j = 1; j <= dims; j++)
-			{
-				dx[at(i, j)] -= 0.5f * (p[at(i + 1, j)] - p[at(i - 1, j)]) / h;
-				dy[at(i, j)] -= 0.5f * (p[at(i, j + 1)] - p[at(i, j - 1)]) / h;
-			}
-		}
-		set_bnd(dims, 1, dx); set_bnd(dims, 2, dy);
+
+		div[at(pos.x, pos.y)] = -0.5f * h * (velX[at(pos.x + 1, pos.y)] - velX[at(pos.x - 1, pos.y)] +
+			velY[at(pos.x, pos.y + 1)] - velY[at(pos.x, pos.y - 1)]);
+		p[at(pos.x, pos.y)] = 0;
+
+		//set_bnd(dims, 0, div); set_bnd(dims, 0, p);
+
+		p[at(pos.x, pos.y)] = (div[at(pos.x, pos.y)] + p[at(pos.x - 1, pos.y)] + p[at(pos.x + 1, pos.y)] +
+			p[at(pos.x, pos.y - 1)] + p[at(pos.x, pos.y + 1)]) / 4;
+
+		//set_bnd(dims, 0, p);
+
+		velX[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
+		velY[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
+
+		//set_bnd(dims, 1, dx); set_bnd(dims, 2, dy);
 	}
 
 	void set_bnd(float _dims, int boundary, float[] tiles)
