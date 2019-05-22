@@ -137,13 +137,13 @@ namespace Assets.Scripts
 			}
 
 
-			ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
-			blocked.SendUpdatesToGpu();
+			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
+			//blocked.SendUpdatesToGpu();
 
-			ApplyDelta(new Vector2Int(1, 1), new Vector2Int(39, 10), 1f, dx);
+			ApplyDelta(new Vector2Int(1, 1), new Vector2Int(16, 16), 10f, dx);
 			dx.SendUpdatesToGpu();
 
-			pressure.AddDelta(new Vector2Int(10, 10), 1000f);
+			pressure.AddDelta(new Vector2Int(15, 15), 600f);
 			pressure.SendUpdatesToGpu();
 
 			// shader

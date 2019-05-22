@@ -43,26 +43,54 @@ float clampy(float val, int dim)
 	return val;
 }
 
+void set_bnd(float2 pos, int boundary, Array tiles)
+{
+	int dims = shaderSizeX;
+	//int i = useX ? pos.x : pos.y;
+
+	if(pos.x == 1)
+	{
+		tiles[at(0, pos.y)] = boundary == 1 ? -tiles[at(1, pos.y)] : tiles[at(1, pos.y)];
+	}
+	else if(pos.x == dims)
+	{
+		tiles[at(dims + 1, pos.y)] = boundary == 1 ? -tiles[at(dims, pos.y)] : tiles[at(dims, pos.y)];
+	}
+	else if(pos.y == 1)
+	{
+		tiles[at(pos.x, 0)] = boundary == 2 ? -tiles[at(pos.x, 1)] : tiles[at(pos.x, 1)];
+	}
+	else if(pos.y == dims)
+	{
+		tiles[at(pos.x, dims + 1)] = boundary == 2 ? -tiles[at(pos.x, dims)] : tiles[at(pos.x, dims)];
+	}
+
+	//tiles[at(0, 0)] = 0.5f * (tiles[at(1, 0)] + tiles[at(0, 1)]);
+	//tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
+	//tiles[at(dims + 1, 0)] = 0.5f * (tiles[at(dims, 0)] + tiles[at(dims + 1, 1)]);
+	//tiles[at(dims + 1, dims + 1)] = 0.5f * (tiles[at(dims, dims + 1)] + tiles[at(dims + 1, dims)]);
+}
+
 void project(float2 pos, float dims, Array velX, Array velY, Array p, Array div)
 {
 	float h;
-	h = 1.0f / dims;
+	h = float(1) / dims;
 
 	div[at(pos.x, pos.y)] = -0.5f * h * (velX[at(pos.x + 1, pos.y)] - velX[at(pos.x - 1, pos.y)] +
 		velY[at(pos.x, pos.y + 1)] - velY[at(pos.x, pos.y - 1)]);
 	p[at(pos.x, pos.y)] = 0;
 
-	//set_bnd(dims, 0, div); set_bnd(dims, 0, p);
+	set_bnd(pos, 0, div); set_bnd(pos, 0, p);
 
 	p[at(pos.x, pos.y)] = (div[at(pos.x, pos.y)] + p[at(pos.x - 1, pos.y)] + p[at(pos.x + 1, pos.y)] +
 		p[at(pos.x, pos.y - 1)] + p[at(pos.x, pos.y + 1)]) / 4;
 
-	//set_bnd(dims, 0, p);
+	set_bnd(pos, 0, p);
 
 	velX[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
 	velY[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
 
-	//set_bnd(dims, 1, dx); set_bnd(dims, 2, dy);
+	set_bnd(pos, 1, dx); set_bnd(pos, 2, dy);
 }
 
 void advect(float2 pos, int dim, int boundary, Array newPressure, Array oldPressure, Array velX, Array velY, float dt)
@@ -94,6 +122,8 @@ void advect(float2 pos, int dim, int boundary, Array newPressure, Array oldPress
 	t0 = 1 - t1;
 
 	newPressure[at(pos.x, pos.y)] = (s0 * (t0 * oldPressure[at(x0, y0)] + t1 * oldPressure[at(x0, y1)]) + s1 * (t0 * oldPressure[at(x1, y0)] + t1 * oldPressure[at(x1, y1)]));
+
+	set_bnd(pos, boundary, newPressure);
 }
 
 float2 getDiffuse(float2 pos, float2 offset, Array newPressure)
@@ -121,6 +151,8 @@ void diffuse(float2 pos, int boundary, Array newPressure, Array oldPressure, flo
 	np.x /= (1 + np.y * a);
 
 	newPressure[at(pos)] = np.x;
+
+	set_bnd(pos, boundary, newPressure);
 }
 
 float4 colorGradient(float value)
@@ -198,7 +230,11 @@ void doStep(uint3 pix : SV_DispatchThreadID)
 		return;
 	}
 
-	dens_step(pos, pressureWrite, pressure, dx, dy, 0.5, 0.5);
+	float viscosity = 1;
+	float dt = 1;
+
+	vel_step(pos, shaderSizeX, dx, dy, dxWrite, dyWrite, viscosity, dt);
+	dens_step(pos, pressureWrite, pressure, dx, dy, viscosity, dt);
 }
 
 #pragma kernel render
@@ -211,6 +247,8 @@ void render(uint3 pix : SV_DispatchThreadID)
 	float p = pressure[at(pos)];
 	int isBlocked = blocked[at(pos)];
 
+	InterlockedAdd(blocked[0], p * 10000);
+
 	if(isBlocked)
 	{
 		c.rgb = 0;
@@ -221,27 +259,5 @@ void render(uint3 pix : SV_DispatchThreadID)
 	}
 
 	RenderTexture[pos.xy] = c;
-}
-
-#pragma kernel copyToWrite
-[numthreads(16, 16, 1)]
-void copyToWrite(uint3 pix : SV_DispatchThreadID)
-{
-	float2 pos = float2(pix.x, pix.y);
-	pressureWrite[at(pos)] = pressure[at(pos)];
-	blockedWrite[at(pos)] = blocked[at(pos)];
-	dxWrite[at(pos)] = dx[at(pos)];
-	dyWrite[at(pos)] = dy[at(pos)];
-}
-
-#pragma kernel copyToRead
-[numthreads(16, 16, 1)]
-void copyToRead(uint3 pix : SV_DispatchThreadID)
-{
-	float2 pos = float2(pix.x, pix.y);
-	pressure[at(pos)] = pressureWrite[at(pos)];
-	blocked[at(pos)] = blockedWrite[at(pos)];
-	dx[at(pos)] = dxWrite[at(pos)];
-	dy[at(pos)] = dyWrite[at(pos)];
 }
 
