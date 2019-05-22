@@ -1,19 +1,24 @@
 ﻿#pragma enable_d3d11_debug_symbols
 
-RWStructuredBuffer<float> pressure;
-RWStructuredBuffer<float> pressureWrite;
+typedef RWStructuredBuffer<float> Array;
+typedef RWStructuredBuffer<int> ArrayInt;
 
-RWStructuredBuffer<int> blocked;
-RWStructuredBuffer<int> blockedWrite;
+// Globals //
+Array pressure;
+Array pressureWrite;
 
-RWStructuredBuffer<float> dx;
-RWStructuredBuffer<float> dxWrite;
+Array dx;
+Array dxWrite;
 
-RWStructuredBuffer<float> dy;
-RWStructuredBuffer<float> dyWrite;
+Array dy;
+Array dyWrite;
+
+ArrayInt blocked;
+ArrayInt blockedWrite;
 
 RWTexture2D<float4> RenderTexture;
 int shaderSizeX;
+/////////////
 
 uint at(float2 pos)
 {
@@ -32,17 +37,17 @@ float clampy(float val, int dim)
 	return val;
 }
 
-void advect(int dim, int x, int y, RWStructuredBuffer<int> blocked, RWStructuredBuffer<float> newPressure, RWStructuredBuffer<float> oldPressure, RWStructuredBuffer<float> velX, RWStructuredBuffer<float> velY)
+void advect(int dim, int x, int y, int boundary, Array newPressure, Array oldPressure, Array velX, Array velY)
 {
-	if(blocked[at(x, y)])
-	{
-		return;
-	}
+	//if(blocked[at(x, y)])
+	//{
+	//	return;
+	//}
 
 	float dt = 1;
 	int x0, y0, x1, y1;
 	float xStart, yStart;
-	float s0, t0, s1, t1; // interpolations
+	float s0, t0, s1, t1; // interpolations.
 	float deltaTime = dt;
 
 	xStart = x - deltaTime * velX[at(x, y)];
@@ -63,13 +68,13 @@ void advect(int dim, int x, int y, RWStructuredBuffer<int> blocked, RWStructured
 
 	newPressure[at(x, y)] = (s0 * (t0 * oldPressure[at(x0, y0)] + t1 * oldPressure[at(x0, y1)]) + s1 * (t0 * oldPressure[at(x1, y0)] + t1 * oldPressure[at(x1, y1)]));
 }
-//a
+
 #pragma kernel forces
 [numthreads(16, 16, 1)]
 void forces(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = float2(pix.x, pix.y);
-	advect(shaderSizeX, pos.x, pos.y, blocked, pressureWrite, pressure, dx, dy);
+	advect(shaderSizeX, pos.x, pos.y, 1, pressureWrite, pressure, dx, dy);
 }
 
 #pragma kernel copyToWrite
@@ -94,7 +99,7 @@ void copyToRead(uint3 pix : SV_DispatchThreadID)
 	dy[at(pos)] = dyWrite[at(pos)];
 }
 
-float2 getDiffuse(float2 pos, float2 offset, RWStructuredBuffer<float> newPressure)
+float2 getDiffuse(float2 pos, float2 offset, Array newPressure)
 {
 	int newPos = at(pos + offset);
 	float p = newPressure[newPos];
@@ -103,7 +108,7 @@ float2 getDiffuse(float2 pos, float2 offset, RWStructuredBuffer<float> newPressu
 	return float2(p, notBlocked);
 }
 
-void diffuse2(float2 pos, int boundary, RWStructuredBuffer<float> newPressure, RWStructuredBuffer<float> oldPressure, float viscosity)
+void diffuse2(float2 pos, int boundary, Array newPressure, Array oldPressure, float viscosity)
 {
 	float2 np = float2(0, 0);
 
@@ -119,6 +124,13 @@ void diffuse2(float2 pos, int boundary, RWStructuredBuffer<float> newPressure, R
 	newPressure[at(pos)] = np.x;
 }
 
+//void dens_step(Array x, float * x0, float * u, float * v, float diff,	float dt)
+//{
+//	add_source(N, x, x0, dt);
+//	SWAP(x0, x); diffuse(N, 0, x, x0, diff, dt);
+//	SWAP(x0, x); advect(N, 0, x, x0, u, v, dt);
+//}
+
 #pragma kernel diffuse
 [numthreads(16, 16, 1)]
 void diffuse(uint3 pix : SV_DispatchThreadID)
@@ -133,22 +145,7 @@ void diffuse(uint3 pix : SV_DispatchThreadID)
 		return;
 	}
 
-	float2 newPressure = float2(0, 0);
-
-	// stable density solver
-	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);//
-	float diffusion = 1;
-
-	newPressure += getDiffuse(pos, float2(1, 0), pressureWrite);
-	newPressure += getDiffuse(pos, float2(0, 1), pressureWrite);
-	newPressure += getDiffuse(pos, float2(-1, 0), pressureWrite);
-	newPressure += getDiffuse(pos, float2(0, -1), pressureWrite);
-
-	newPressure.x *= diffusion;
-	newPressure.x += p;
-	newPressure.x /= (1 + newPressure.y * diffusion);
-
-	pressureWrite[at(pos)] = newPressure.x;
+	diffuse2(pos, 0, pressureWrite, pressure, 1);
 }
 
 float4 colorGradient(float value)
