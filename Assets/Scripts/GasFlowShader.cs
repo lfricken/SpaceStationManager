@@ -22,6 +22,7 @@ namespace Assets.Scripts
 		private int blocked;
 
 		public int sum;
+		int pressureSync;
 
 		public bool Blocked
 		{
