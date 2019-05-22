@@ -80,7 +80,7 @@ namespace Assets.Scripts
 		int copyToWrite;
 		int copyToRead;
 		int forces;
-		int diffuse;
+		int doStep;
 		int render;
 		#endregion
 
@@ -153,68 +153,68 @@ namespace Assets.Scripts
 				shader.SetInt(nameof(shaderSizeX), shaderSizeX);
 			}
 
-			// copyToWrite
+			//// copyToWrite
+			//{
+			//	copyToWrite = shader.FindKernel(nameof(copyToWrite));
+			//	pressure.SendTo(copyToWrite, shader);
+			//	pressureWrite.SendTo(copyToWrite, shader);
+
+			//	blocked.SendTo(copyToWrite, shader);
+			//	blockedWrite.SendTo(copyToWrite, shader);
+
+			//	dx.SendTo(copyToWrite, shader);
+			//	dxWrite.SendTo(copyToWrite, shader);
+
+			//	dy.SendTo(copyToWrite, shader);
+			//	dyWrite.SendTo(copyToWrite, shader);
+			//}
+
+			//// copyToRead
+			//{
+			//	copyToRead = shader.FindKernel(nameof(copyToRead));
+			//	pressure.SendTo(copyToRead, shader);
+			//	pressureWrite.SendTo(copyToRead, shader);
+
+			//	blocked.SendTo(copyToRead, shader);
+			//	blockedWrite.SendTo(copyToRead, shader);
+
+			//	dx.SendTo(copyToRead, shader);
+			//	dxWrite.SendTo(copyToRead, shader);
+
+			//	dy.SendTo(copyToRead, shader);
+			//	dyWrite.SendTo(copyToRead, shader);
+			//}
+
+			//// forces
+			//{
+			//	forces = shader.FindKernel(nameof(forces));
+			//	pressure.SendTo(forces, shader);
+			//	pressureWrite.SendTo(forces, shader);
+
+			//	blocked.SendTo(forces, shader);
+			//	blockedWrite.SendTo(forces, shader);
+
+			//	dx.SendTo(forces, shader);
+			//	dxWrite.SendTo(forces, shader);
+
+			//	dy.SendTo(forces, shader);
+			//	dyWrite.SendTo(forces, shader);
+			//}
+
+			// doStep
 			{
-				copyToWrite = shader.FindKernel(nameof(copyToWrite));
-				pressure.SendTo(copyToWrite, shader);
-				pressureWrite.SendTo(copyToWrite, shader);
+				doStep = shader.FindKernel(nameof(doStep));
+				pressure.SendTo(doStep, shader);
+				pressureWrite.SendTo(doStep, shader);
 
-				blocked.SendTo(copyToWrite, shader);
-				blockedWrite.SendTo(copyToWrite, shader);
+				blocked.SendTo(doStep, shader);
+				blockedWrite.SendTo(doStep, shader);
 
-				dx.SendTo(copyToWrite, shader);
-				dxWrite.SendTo(copyToWrite, shader);
+				dx.SendTo(doStep, shader);
+				dxWrite.SendTo(doStep, shader);
 
-				dy.SendTo(copyToWrite, shader);
-				dyWrite.SendTo(copyToWrite, shader);
-			}
-
-			// copyToRead
-			{
-				copyToRead = shader.FindKernel(nameof(copyToRead));
-				pressure.SendTo(copyToRead, shader);
-				pressureWrite.SendTo(copyToRead, shader);
-
-				blocked.SendTo(copyToRead, shader);
-				blockedWrite.SendTo(copyToRead, shader);
-
-				dx.SendTo(copyToRead, shader);
-				dxWrite.SendTo(copyToRead, shader);
-
-				dy.SendTo(copyToRead, shader);
-				dyWrite.SendTo(copyToRead, shader);
-			}
-
-			// forces
-			{
-				forces = shader.FindKernel(nameof(forces));
-				pressure.SendTo(forces, shader);
-				pressureWrite.SendTo(forces, shader);
-
-				blocked.SendTo(forces, shader);
-				blockedWrite.SendTo(forces, shader);
-
-				dx.SendTo(forces, shader);
-				dxWrite.SendTo(forces, shader);
-
-				dy.SendTo(forces, shader);
-				dyWrite.SendTo(forces, shader);
-			}
-
-			// disperse
-			{
-				diffuse = shader.FindKernel(nameof(diffuse));
-				pressure.SendTo(diffuse, shader);
-				pressureWrite.SendTo(diffuse, shader);
-
-				blocked.SendTo(diffuse, shader);
-				blockedWrite.SendTo(diffuse, shader);
-
-				dx.SendTo(diffuse, shader);
-				dxWrite.SendTo(diffuse, shader);
-
-				dy.SendTo(diffuse, shader);
-				dyWrite.SendTo(diffuse, shader);
+				dy.SendTo(doStep, shader);
+				dyWrite.SendTo(doStep, shader);
 			}
 
 			// render
@@ -239,13 +239,13 @@ namespace Assets.Scripts
 		{
 			int threadGroups = Resolution.x / numXYThreads;
 
-			shader.Dispatch(copyToWrite, threadGroups, threadGroups, 1);
+			//shader.Dispatch(copyToWrite, threadGroups, threadGroups, 1);
 
-			shader.Dispatch(diffuse, threadGroups, threadGroups, 1);
-			shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
+			shader.Dispatch(doStep, threadGroups, threadGroups, 1);
+			//shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
 
-			shader.Dispatch(forces, threadGroups, threadGroups, 1);
-			shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
+			//shader.Dispatch(forces, threadGroups, threadGroups, 1);
+			//shader.Dispatch(copyToRead, threadGroups, threadGroups, 1);
 
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
 		}
