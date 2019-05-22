@@ -6,10 +6,11 @@ struct PressureTile
 	int blocked;
 	int sum;
 };
-RWStructuredBuffer<PressureTile> PressureTilesWrite;
-RWStructuredBuffer<PressureTile> PressureTiles;
 
-RWStructuredBuffer<int> total;
+typedef RWStructuredBuffer<PressureTile> Array;
+
+Array PressureTilesWrite;
+Array PressureTiles;
 
 RWTexture2D<float4> RenderTexture;
 int shaderSizeX;
@@ -28,16 +29,13 @@ float2 getDiffuse(float2 pos, float2 offset)
 	return float2(contrib, (tile.blocked * -1) + 1);
 }
 
-#pragma kernel diffuse
-[numthreads(16, 16, 1)]
-void diffuse(uint3 pix : SV_DispatchThreadID)
+void diffuse2(float2 pos, Array newPressure, Array oldPressure)
 {
-	float2 pos = float2(pix.x, pix.y);
-	PressureTile tile = PressureTiles[at(pos)];
-	PressureTilesWrite[at(pos)] = tile;
+	PressureTile tile = oldPressure[at(pos)];
+	newPressure[at(pos)] = tile;
 
-	PressureTiles[at(pos)].sum = 0;
-	PressureTilesWrite[at(pos)].sum = 0;
+	newPressure[at(pos)].sum = 0;
+	oldPressure[at(pos)].sum = 0;
 
 
 	// TODO don't just return, calc bounces
@@ -46,22 +44,32 @@ void diffuse(uint3 pix : SV_DispatchThreadID)
 		return;
 	}
 
-	float2 newPressure = float2(0, 0);
+	float2 pressure = float2(0, 0);
 
 	// stable density solver
-	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);
+	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);//
 	float diffusion = 1;
 
-	newPressure += getDiffuse(pos, float2(1, 0));
-	newPressure += getDiffuse(pos, float2(0, 1));
-	newPressure += getDiffuse(pos, float2(-1, 0));
-	newPressure += getDiffuse(pos, float2(0, -1));
+	pressure += getDiffuse(pos, float2(1, 0));
+	pressure += getDiffuse(pos, float2(0, 1));
+	pressure += getDiffuse(pos, float2(-1, 0));
+	pressure += getDiffuse(pos, float2(0, -1));
 
-	newPressure.x *= diffusion;
-	newPressure.x += tile.pressure;
-	newPressure.x /= (1 + newPressure.y * diffusion);
+	pressure.x *= diffusion;
+	pressure.x += tile.pressure;
+	pressure.x /= (1 + pressure.y * diffusion);
 
-	PressureTilesWrite[at(pos)].pressure = newPressure.x;
+	oldPressure[at(pos)].pressure = pressure.x;
+}
+
+#pragma kernel diffuse
+[numthreads(16, 16, 1)]
+void diffuse(uint3 pix : SV_DispatchThreadID)
+{
+	float2 pos = float2(pix.x, pix.y);
+	PressureTile tile = PressureTiles[at(pos)];
+	PressureTilesWrite[at(pos)] = tile;
+	diffuse2(pos, PressureTilesWrite, PressureTiles);
 }
 
 float4 colorGradient(float value)
@@ -120,5 +128,5 @@ void render(uint3 pix : SV_DispatchThreadID)
 
 	RenderTexture[pos.xy] = c;
 
-	InterlockedAdd(PressureTilesWrite[at(float2(0, 0))].sum, tile.pressure * 1000);
+	//InterlockedAdd(PressureTilesWrite[at(float2(0, 0))].sum, tile.pressure * 1000);
 }

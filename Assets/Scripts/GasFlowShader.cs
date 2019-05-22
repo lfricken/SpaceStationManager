@@ -201,7 +201,7 @@ namespace Assets.Scripts
 			shader.Dispatch(render, threadGroups, threadGroups, 1);
 
 
-			Debug.Log(writeTiles.SendUpdatesToGpu().sum);
+			//Debug.Log(writeTiles.SendUpdatesToGpu().sum);
 		}
 	}
 }
