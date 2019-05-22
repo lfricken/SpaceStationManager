@@ -94,13 +94,29 @@ void copyToRead(uint3 pix : SV_DispatchThreadID)
 	dy[at(pos)] = dyWrite[at(pos)];
 }
 
-float2 getDiffuse(float2 pos, float2 offset)
+float2 getDiffuse(float2 pos, float2 offset, RWStructuredBuffer<float> newPressure)
 {
 	int newPos = at(pos + offset);
-	float p = pressureWrite[newPos];
+	float p = newPressure[newPos];
 	int notBlocked = (blocked[newPos] * -1) + 1;
 
 	return float2(p, notBlocked);
+}
+
+void diffuse2(float2 pos, int boundary, RWStructuredBuffer<float> newPressure, RWStructuredBuffer<float> oldPressure, float viscosity)
+{
+	float2 np = float2(0, 0);
+
+	np += getDiffuse(pos, float2(1, 0), newPressure);
+	np += getDiffuse(pos, float2(0, 1), newPressure);
+	np += getDiffuse(pos, float2(-1, 0), newPressure);
+	np += getDiffuse(pos, float2(0, -1), newPressure);
+
+	np.x *= viscosity;
+	np.x += oldPressure[at(pos)];
+	np.x /= (1 + np.y * viscosity);
+
+	newPressure[at(pos)] = np.x;
 }
 
 #pragma kernel diffuse
@@ -123,10 +139,10 @@ void diffuse(uint3 pix : SV_DispatchThreadID)
 	// x = (x0 + a*(x1 +x2 + x3 + x4)) / (1 + 4 * a);//
 	float diffusion = 1;
 
-	newPressure += getDiffuse(pos, float2(1, 0));
-	newPressure += getDiffuse(pos, float2(0, 1));
-	newPressure += getDiffuse(pos, float2(-1, 0));
-	newPressure += getDiffuse(pos, float2(0, -1));
+	newPressure += getDiffuse(pos, float2(1, 0), pressureWrite);
+	newPressure += getDiffuse(pos, float2(0, 1), pressureWrite);
+	newPressure += getDiffuse(pos, float2(-1, 0), pressureWrite);
+	newPressure += getDiffuse(pos, float2(0, -1), pressureWrite);
 
 	newPressure.x *= diffusion;
 	newPressure.x += p;

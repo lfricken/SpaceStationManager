@@ -86,7 +86,8 @@ public class GameManager : MonoBehaviour
 		tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
 		tiles[at(dims + 1, 0)] = 0.5f * (tiles[at(dims, 0)] + tiles[at(dims + 1, 1)]);
 		tiles[at(dims + 1, dims + 1)] = 0.5f * (tiles[at(dims, dims + 1)] + tiles[at(dims + 1, dims)]);
-	}
+	}
+
 
 	void advect(int dim, float[] newPressure, float[] oldPressure, float[] velX, float[] velY, float dt)
 	{
