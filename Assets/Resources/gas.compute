@@ -5,7 +5,6 @@ struct PressureTile
 	float pressure;
 	int blocked;
 	int sum;
-	int pressureSync;
 };
 typedef RWStructuredBuffer<PressureTile> Array;
 
@@ -26,24 +25,6 @@ float2 getDiffuse(float2 pos, float2 offset, Array newPressure)
 	PressureTile tile = newPressure[at(pos + offset)];
 
 	return float2(tile.pressure, (tile.blocked * -1) + 1);
-}
-
-/// still need to use ints for pressure to sync the pressure movements
-void sync(float2 pos, Array newPressure)
-{
-	PressureTile tile = newPressure[at(pos)];
-	newPressure[at(pos)].pressure = float(tile.pressureSync) / float(1000000);
-}
-
-void move(float2 pos, Array newPressure, Array oldPressure)
-{
-	PressureTile tile = oldPressure[at(pos)];
-	int pd = 0.0 * tile.pressure * 1000000;
-
-	InterlockedAdd(newPressure[at(pos + float2(0, 0))].pressureSync, -pd);
-	InterlockedAdd(newPressure[at(pos + float2(1, 0))].pressureSync, pd);
-
-	//newPressure[at(pos)].pressureSync = 1000000 * tile.pressure;
 }
 
 void diffuse2(float2 pos, Array newPressure, Array oldPressure)
@@ -84,8 +65,6 @@ void diffuse(uint3 pix : SV_DispatchThreadID)
 	float2 pos = float2(pix.x, pix.y);
 	diffuse2(pos, PressureTilesWrite, PressureTiles);
 	diffuse2(pos, PressureTiles, PressureTilesWrite);
-	move(pos, PressureTilesWrite, PressureTiles);
-	move(pos, PressureTiles, PressureTilesWrite);
 }
 
 float4 colorGradient(float value)
@@ -137,8 +116,6 @@ void render(uint3 pix : SV_DispatchThreadID)
 	}
 	else
 	{
-
-		sync(pos, PressureTiles);
 		c = colorGradient(tile.pressure);
 	}
 
