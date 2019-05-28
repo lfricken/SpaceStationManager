@@ -72,6 +72,7 @@ namespace Assets.Scripts
 
 		#region Shader
 		public RenderTexture RenderTexture;
+		public RenderTexture VelocityMap;
 		/// <summary>
 		/// If you update this, you need to update gas.compute!
 		/// </summary>
@@ -102,6 +103,10 @@ namespace Assets.Scripts
 		int project_loop;
 		int project_end;
 
+		int set_bnd_project_dxdy;
+		int set_bnd_p;
+		int set_bnd_project_dxdyRead;
+
 		int render_pressure;
 		int totalMass1000;
 		#endregion
@@ -115,6 +120,11 @@ namespace Assets.Scripts
 			RenderTexture.enableRandomWrite = true;
 			RenderTexture.Create();
 			RenderTexture.filterMode = FilterMode.Point;
+
+			VelocityMap = new RenderTexture(resolution.x, resolution.y, resolution.z);
+			VelocityMap.enableRandomWrite = true;
+			VelocityMap.Create();
+			VelocityMap.filterMode = FilterMode.Point;
 
 			SetupShaders(resolution);
 		}
@@ -181,10 +191,10 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
 			blocked.SendUpdatesToGpu();
 
-			ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, resolution.y - 8), 0.5f, dx);
+			//ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, resolution.y - 8), 0.5f, dx);
 			dx.SendUpdatesToGpu();
 
-			var center = new Vector2Int(resolution.x / 2, resolution.y / 2);
+			var center = new Vector2Int(resolution.x - 2, resolution.y - 2);
 
 			var p = resolution.x * resolution.x / 2;
 
@@ -211,7 +221,7 @@ namespace Assets.Scripts
 
 			//	//pressure.SendTo(set_bnd_diffuse_pressure, shader);
 			//	//pressureRead.SendTo(set_bnd_diffuse_pressure, shader);
-			//}
+			//}//
 
 
 
@@ -221,6 +231,7 @@ namespace Assets.Scripts
 
 				sendAll(render_pressure);
 				shader.SetTexture(render_pressure, nameof(RenderTexture), RenderTexture);
+				shader.SetTexture(render_pressure, nameof(VelocityMap), VelocityMap);
 			}
 
 
@@ -290,8 +301,25 @@ namespace Assets.Scripts
 				swap_dy = shader.FindKernel(nameof(swap_dy));
 				sendAll(swap_dy);
 			}
+
+			// set_bnd_project_dxdy
+			{
+				set_bnd_project_dxdy = shader.FindKernel(nameof(set_bnd_project_dxdy));
+				sendAll(set_bnd_project_dxdy);
+			}
+
+			// set_bnd_p
+			{
+				set_bnd_p = shader.FindKernel(nameof(set_bnd_p));
+				sendAll(set_bnd_p);
+			}
+
+			// set_bnd_project_dxdyRead
+			{
+				set_bnd_project_dxdyRead = shader.FindKernel(nameof(set_bnd_project_dxdyRead));
+				sendAll(set_bnd_project_dxdyRead);
+			}
 		}
-		int i = 0;
 
 		public void Tick()
 		{
@@ -317,52 +345,50 @@ namespace Assets.Scripts
 
 		void swap(FieldType type)
 		{
+			if (FieldType.Pressure == type)
+				Run(swap_pressure);
 			if (FieldType.DeltaX == type)
 				Run(swap_dx);
 			if (FieldType.DeltaY == type)
 				Run(swap_dy);
-			if (FieldType.Pressure == type)
-				Run(swap_pressure);
 		}
 
 		void diffuse(FieldType type)
 		{
 			for (int k = 0; k < iterations; ++k)
 			{
+				if (FieldType.Pressure == type)
+					Run(diffuse_pressure);
 				if (FieldType.DeltaX == type)
 					Run(diffuse_dx);
 				if (FieldType.DeltaY == type)
 					Run(diffuse_dy);
-				if (FieldType.Pressure == type)
-					Run(diffuse_pressure);
 			}
 		}
 
 		void advect(FieldType type)
 		{
+			if (FieldType.Pressure == type)
+				Run(advect_pressure);
 			if (FieldType.DeltaX == type)
 				Run(advect_dx);
 			if (FieldType.DeltaY == type)
 				Run(advect_dy);
-			if (FieldType.Pressure == type)
-				Run(advect_pressure);
 		}
 
 		void project()
 		{
 			Run(project_start);
-			// TODO move set_bnd here
-			// TODO move set_bnd here
+			Run(set_bnd_project_dxdyRead);
 
 			for (int k = 0; k < iterations; ++k)
 			{
 				Run(project_loop);
-				// TODO move set_bnd here
+				Run(set_bnd_p);
 			}
 
 			Run(project_end);
-			// TODO move set_bnd here
-			// TODO move set_bnd here
+			Run(set_bnd_project_dxdy);
 		}
 
 		void vel_step()

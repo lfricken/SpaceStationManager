@@ -17,6 +17,7 @@ ArrayInt blocked;
 ArrayInt debug;
 
 RWTexture2D<float4> RenderTexture;
+RWTexture2D<float4> VelocityMap;
 
 /////////////
 int shaderSizeX;
@@ -132,7 +133,7 @@ void project_start_core(float2 pos, float dims, Array u, Array v, Array p, Array
 		v[at(pos.x, pos.y + 1)] - v[at(pos.x, pos.y - 1)]);
 	p[at(pos)] = 0;
 
-	set_bnd(pos, 0, div); set_bnd(pos, 0, p);
+	//set_bnd(pos, 0, div); set_bnd(pos, 0, p);
 }
 
 void project_loop_core(float2 pos, float dims, Array u, Array v, Array p, Array div)
@@ -152,7 +153,7 @@ void project_end_core(float2 pos, float dims, Array u, Array v, Array p, Array d
 	u[at(pos)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
 	v[at(pos)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
 
-	set_bnd(pos, 1, u); set_bnd(pos, 2, v);
+	//set_bnd(pos, 1, u); set_bnd(pos, 2, v);
 }
 
 float2 getDiffuse(float2 pos, float2 offset, Array newPressure)
@@ -269,8 +270,9 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 	}
 
 	RenderTexture[pos] = c;
+	VelocityMap[pos] = float4(1, 0, 1, 1);
 
-	// dont count the pressure in the boundaries!
+	// dont count the pressure in the boundaries!//
 	if(!shouldSkip(pos))
 		InterlockedAdd(debug[0], p * 1000);
 }
@@ -322,7 +324,7 @@ void advect_dx(uint3 pix : SV_DispatchThreadID)
 [numthreads(16, 16, 1)]
 void advect_dy(uint3 pix : SV_DispatchThreadID)
 {
-	//advect ( N, 2, v, v0, u0, v0, dt );
+	//advect ( N, 2, v, v0, u0, v0, dt );//
 	advect_core(pix.xy, shaderSizeX, 2, dy, dyRead, dxRead, dyRead, dtGlobal);
 }
 
@@ -353,13 +355,28 @@ void project_end(uint3 pix : SV_DispatchThreadID)
 ///////////////
 /// set_bnd ///
 ///////////////
-//#pragma kernel set_bnd_diffuse_pressure
-//[numthreads(16, 16, 1)]
-//void set_bnd_diffuse_pressure(uint3 pix : SV_DispatchThreadID)
-//{
-//	set_bnd(pix.xy, 0, pressure);
-//	set_bnd(pix.xy, 0, pressureRead);
-//}
+#pragma kernel set_bnd_project_dxdy
+[numthreads(16, 16, 1)]
+void set_bnd_project_dxdy(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 1, dx);
+	set_bnd(pix.xy, 2, dy);
+}
+
+#pragma kernel set_bnd_p
+[numthreads(16, 16, 1)]
+void set_bnd_p(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 0, dxRead);
+}
+
+#pragma kernel set_bnd_project_dxdyRead
+[numthreads(16, 16, 1)]
+void set_bnd_project_dxdyRead(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 1, dxRead);
+	set_bnd(pix.xy, 2, dyRead);
+}
 
 ////////////
 /// swap ///

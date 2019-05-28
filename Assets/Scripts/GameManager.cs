@@ -15,8 +15,14 @@ public class GameManager : MonoBehaviour
 		gas = new GasFlowGpu(resolution);
 		//gas2 = new GasWorld<Tile>(new Vector2Int(resolution.x, resolution.y));
 
-		var outputImage = GameObject.Find("canvas/image").GetComponent<UnityEngine.UI.Image>();
-		outputImage.material.mainTexture = gas.RenderTexture;
+		{
+			var outputImage = GameObject.Find("canvas/image").GetComponent<UnityEngine.UI.Image>();
+			outputImage.material.SetTexture("_MainTex", gas.RenderTexture);
+		}
+		{
+			var velocity = GameObject.Find("velocity/image2").GetComponent<UnityEngine.UI.Image>();
+			velocity.material.SetTexture("_MainTex", gas.VelocityMap);
+		}
 	}
 
 	void Start()
