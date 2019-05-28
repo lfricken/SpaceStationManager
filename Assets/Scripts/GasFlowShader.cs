@@ -80,7 +80,7 @@ namespace Assets.Scripts
 
 		readonly float viscosityGlobal = 1f;
 		readonly float dtGlobal = 0.1f;
-		readonly int iterations = 20;
+		readonly int iterations = 2; // needs to be even because we are ping ponging values
 
 		ComputeShader shader;
 
@@ -194,6 +194,8 @@ namespace Assets.Scripts
 			// swap
 			{
 				swap_pressure = shader.FindKernel(nameof(swap_pressure));
+
+				debug.SendTo(diffuse_pressure, shader);
 				pressure.SendTo(swap_pressure, shader);
 				pressureRead.SendTo(swap_pressure, shader);
 			}
@@ -203,8 +205,9 @@ namespace Assets.Scripts
 				render_pressure = shader.FindKernel(nameof(render_pressure));
 
 				debug.SendTo(render_pressure, shader);
-				pressureRead.SendTo(render_pressure, shader);
 				blocked.SendTo(render_pressure, shader);
+				pressure.SendTo(render_pressure, shader);
+				pressureRead.SendTo(render_pressure, shader);
 				shader.SetTexture(render_pressure, nameof(RenderTexture), RenderTexture);
 			}
 		}
@@ -290,11 +293,17 @@ namespace Assets.Scripts
 			Run(render_pressure);
 		}
 
+		int i = 0;
+
 		public void Tick()
 		{
 			//vel_step();
-			dense_step();
-			display();
+			//if (i < 2)
+			{
+				++i;
+				dense_step();
+				display();
+			}
 
 			debug.SendUpdatesToGpu();
 			Debug.Log(debug.cpuData[0]);

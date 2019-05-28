@@ -228,7 +228,7 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 
 	float4 c = float4(1, 0, 1, 1);
 
-	float p = pressureRead[at(pos)];
+	float p = pressure[at(pos)];
 	bool isBlocked = blocked[at(pos)];
 
 	if(isBlocked)
