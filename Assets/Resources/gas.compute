@@ -13,8 +13,8 @@ Array dx;
 Array dyRead;
 Array dy;
 
-ArrayInt blockedRead;
 ArrayInt blocked;
+ArrayInt debug;
 
 RWTexture2D<float4> RenderTexture;
 
@@ -22,6 +22,8 @@ RWTexture2D<float4> RenderTexture;
 int shaderSizeX;
 float viscosityGlobal;
 float dtGlobal;
+
+int totalMass1000;
 /////////////
 
 uint at(float2 pos)
@@ -51,7 +53,13 @@ float clampy(float val, int dim)
 
 void set_bnd(float2 pos, int boundary, Array tiles)
 {
-	int dims = shaderSizeX;
+	int dims = shaderSizeX - 2;
+	//int dims = shaderSizeX - 2;
+	//int innerEdgeLow = 1;
+	//int innerEdgeHigh = shaderSizeX - 2;
+
+	//int outerEdgeLow = 0;
+	//int outerEdgeHigh = shaderSizeX - 1;
 
 	if(pos.x == 1)
 	{
@@ -70,7 +78,7 @@ void set_bnd(float2 pos, int boundary, Array tiles)
 		tiles[at(pos.x, dims + 1)] = boundary == 2 ? -tiles[at(pos.x, dims)] : tiles[at(pos.x, dims)];
 	}
 
-	if((pos.x == 0 || pos.y == 0) && (pos.x == shaderSizeX-1 || pos.y == shaderSizeX-1))
+	if((pos.x == 0 || pos.y == 0) && (pos.x == shaderSizeX - 1 || pos.y == shaderSizeX - 1))
 	{
 		tiles[at(0, 0)] = 0.5f * (tiles[at(1, 0)] + tiles[at(0, 1)]);
 		tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
@@ -124,12 +132,13 @@ void project_loop_core(float2 pos, float dims, Array u, Array v, Array p, Array 
 
 	p[at(pos.x, pos.y)] = (div[at(pos.x, pos.y)] + p[at(pos.x - 1, pos.y)] + p[at(pos.x + 1, pos.y)] +
 		p[at(pos.x, pos.y - 1)] + p[at(pos.x, pos.y + 1)]) / 4;
+
+	set_bnd(pos, 0, p);
 }
 
 void project_end_core(float2 pos, float dims, Array u, Array v, Array p, Array div)
 {
 	float h = float(1) / dims;
-	set_bnd(pos, 0, p);
 
 	u[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
 	v[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
@@ -148,6 +157,9 @@ float2 getDiffuse(float2 pos, float2 offset, Array newPressure)
 
 void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure, float viscosity, float deltaTime)
 {
+	//if(blocked[at(pos)])
+	//	return;
+
 	float2 np = float2(0, 0);
 
 	float a = viscosity * deltaTime;
@@ -164,6 +176,7 @@ void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure
 	newPressure[at(pos)] = np.x;
 
 	set_bnd(pos, boundary, newPressure);
+	debug[0] = 0;
 }
 
 float4 colorGradient(float value)
@@ -178,6 +191,7 @@ float4 colorGradient(float value)
 		return float4(1, 1, 1, 1);
 	}
 
+	// TODO extend this to purple
 	if(value > max)
 	{
 		color.r = 1;
@@ -200,41 +214,22 @@ float4 colorGradient(float value)
 	return color;
 }
 
-//void vel_step(float2 pos, int N, Array u, Array v, Array u0, Array v0, float visc, float dt)
-//{
-//	//add_source(N, u, u0, dt); add_source(N, v, v0, dt);
-//	SWAP(u0, u); diffuse(N, 1, u, u0, visc, dt);
-//	SWAP(v0, v); diffuse(N, 2, v, v0, visc, dt);
-//	project(pos, N, u, v, u0, v0);
-//	SWAP(u0, u); SWAP(v0, v);
-//	advect(pos, N, 1, u, u0, u0, v0, dt); advect(pos, N, 2, v, v0, u0, v0, dt);
-//	project(pos, N, u, v, u0, v0);
-//}
-
-//void dens_step(float2 pos, Array x, Array x0, Array u, Array v, float viscosity, float dt)
-//{
-//	//swap
-//	SWAP(x, x0);
-//	diffuse(pos, 0, x, x0, viscosity, dt);
-//
-//	//swap.
-//	SWAP(x, x0);
-//	advect(pos, shaderSizeX, 0, x, x0, u, v, dt);
-//}
-
-// render
-#pragma kernel render
+//////////////
+/// render ///
+//////////////
+#pragma kernel render_pressure
 [numthreads(16, 16, 1)]
-void render(uint3 pix : SV_DispatchThreadID)
+void render_pressure(uint3 pix : SV_DispatchThreadID)
 {
-	if(pix.x == 0 || pix.y == 0)
-		return;
+	//if(pix.x == 0 || pix.y == 0)
+	//	return;
+
+	float2 pos = pix.xy;
 
 	float4 c = float4(1, 0, 1, 1);
-	float2 pos = float2(pix.x, pix.y);
 
-	float p = pressure[at(pos)];
-	int isBlocked = blocked[at(pos)];
+	float p = pressureRead[at(pos)];
+	bool isBlocked = blocked[at(pos)];
 
 	if(isBlocked)
 	{
@@ -245,7 +240,9 @@ void render(uint3 pix : SV_DispatchThreadID)
 		c = colorGradient(p);
 	}
 
-	RenderTexture[pos.xy] = c;
+	RenderTexture[pos] = c;
+
+	InterlockedAdd(debug[0], p * 1000);
 }
 
 ///////////////
@@ -279,6 +276,7 @@ void diffuse_dy(uint3 pix : SV_DispatchThreadID)
 [numthreads(16, 16, 1)]
 void advect_pressure(uint3 pix : SV_DispatchThreadID)
 {
+	//advect ( N, 0, x, x0, u, v, dt );
 	advect_core(pix.xy, shaderSizeX, 0, pressure, pressureRead, dx, dy, dtGlobal);
 }
 
@@ -286,14 +284,16 @@ void advect_pressure(uint3 pix : SV_DispatchThreadID)
 [numthreads(16, 16, 1)]
 void advect_dx(uint3 pix : SV_DispatchThreadID)
 {
-	//project_loop_core(pix.xy, shaderSizeX, dx, dy, dxRead, dyRead);
+	//advect ( N, 1, u, u0, u0, v0, dt ); 
+	advect_core(pix.xy, shaderSizeX, 1, dx, dxRead, dxRead, dyRead, dtGlobal);
 }
 
 #pragma kernel project_end
 [numthreads(16, 16, 1)]
 void advect_dy(uint3 pix : SV_DispatchThreadID)
 {
-	//project_end_core(pix.xy, shaderSizeX, dx, dy, dxRead, dyRead);
+	//advect ( N, 2, v, v0, u0, v0, dt );
+	advect_core(pix.xy, shaderSizeX, 2, dy, dyRead, dxRead, dyRead, dtGlobal);
 }
 
 ///////////////
