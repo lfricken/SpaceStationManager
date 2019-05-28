@@ -180,8 +180,11 @@ bool shouldSkip(float2 pos)
 
 void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure, float viscosity, float deltaTime)
 {
-	if(shouldSkip(pos))
-		return;
+	//if(shouldSkip(pos))
+	//{
+	//	set_bnd(pos, boundary, newPressure);
+	//	return;
+	//}
 	//if(blocked[at(pos)])//
 	//	return;
 
@@ -315,7 +318,7 @@ void advect_dx(uint3 pix : SV_DispatchThreadID)
 	advect_core(pix.xy, shaderSizeX, 1, dx, dxRead, dxRead, dyRead, dtGlobal);
 }
 
-#pragma kernel project_end
+#pragma kernel advect_dy
 [numthreads(16, 16, 1)]
 void advect_dy(uint3 pix : SV_DispatchThreadID)
 {
@@ -350,17 +353,24 @@ void project_end(uint3 pix : SV_DispatchThreadID)
 ///////////////
 /// set_bnd ///
 ///////////////
-#pragma kernel set_bnd_diffuse_pressure
-[numthreads(16, 16, 1)]
-void set_bnd_diffuse_pressure(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 0, pressure);
-	set_bnd(pix.xy, 0, pressureRead);
-}
+//#pragma kernel set_bnd_diffuse_pressure
+//[numthreads(16, 16, 1)]
+//void set_bnd_diffuse_pressure(uint3 pix : SV_DispatchThreadID)
+//{
+//	set_bnd(pix.xy, 0, pressure);
+//	set_bnd(pix.xy, 0, pressureRead);
+//}
 
 ////////////
 /// swap ///
 ////////////
+#pragma kernel swap_pressure
+[numthreads(16, 16, 1)]
+void swap_pressure(uint3 pix : SV_DispatchThreadID)
+{
+	swap_core(pix.xy, pressure, pressureRead);
+}
+
 #pragma kernel swap_dx
 [numthreads(16, 16, 1)]
 void swap_dx(uint3 pix : SV_DispatchThreadID)
@@ -373,11 +383,4 @@ void swap_dx(uint3 pix : SV_DispatchThreadID)
 void swap_dy(uint3 pix : SV_DispatchThreadID)
 {
 	swap_core(pix.xy, dy, dyRead);
-}
-
-#pragma kernel swap_pressure
-[numthreads(16, 16, 1)]
-void swap_pressure(uint3 pix : SV_DispatchThreadID)
-{
-	swap_core(pix.xy, pressure, pressureRead);
 }

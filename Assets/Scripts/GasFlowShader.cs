@@ -79,7 +79,7 @@ namespace Assets.Scripts
 		int threadGroups;
 
 		const float viscosityGlobal = 0.1f;
-		const int iterations = 20; // needs to be even because we are ping ponging values
+		const int iterations = 40; // needs to be even because we are ping ponging values
 		float dtGlobal = 0.1f;
 
 		ComputeShader shader;
@@ -133,6 +133,21 @@ namespace Assets.Scripts
 			tiles.SendUpdatesToGpu();
 		}
 
+		void sendAll(int handle)
+		{
+			debug.SendTo(handle, shader);
+			blocked.SendTo(handle, shader);
+
+			dx.SendTo(handle, shader);
+			dy.SendTo(handle, shader);
+
+			dxRead.SendTo(handle, shader);
+			dyRead.SendTo(handle, shader);
+
+			pressure.SendTo(handle, shader);
+			pressureRead.SendTo(handle, shader);
+		}
+
 		void SetupShaders(Vector3Int resolution)
 		{
 			shaderSizeX = resolution.x;
@@ -166,7 +181,7 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
 			blocked.SendUpdatesToGpu();
 
-			ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, 4), 0.1f, dx);
+			ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, resolution.y - 8), 0.5f, dx);
 			dx.SendUpdatesToGpu();
 
 			var center = new Vector2Int(resolution.x / 2, resolution.y / 2);
@@ -189,56 +204,103 @@ namespace Assets.Scripts
 				shader.SetFloat(nameof(dtGlobal), dtGlobal);
 			}
 
-			// set_bnd
-			{
-				set_bnd_diffuse_pressure = shader.FindKernel(nameof(set_bnd_diffuse_pressure));
+			//// set_bnd
+			//{
+			//	set_bnd_diffuse_pressure = shader.FindKernel(nameof(set_bnd_diffuse_pressure));
+			//	sendAll(set_bnd_diffuse_pressure);
 
-				pressure.SendTo(set_bnd_diffuse_pressure, shader);
-				pressureRead.SendTo(set_bnd_diffuse_pressure, shader);
+			//	//pressure.SendTo(set_bnd_diffuse_pressure, shader);
+			//	//pressureRead.SendTo(set_bnd_diffuse_pressure, shader);
+			//}
+
+
+
+			// render_pressure
+			{
+				render_pressure = shader.FindKernel(nameof(render_pressure));
+
+				sendAll(render_pressure);
+				shader.SetTexture(render_pressure, nameof(RenderTexture), RenderTexture);
 			}
 
-			// diffuse
+
+			// diffuse_pressure
 			{
 				diffuse_pressure = shader.FindKernel(nameof(diffuse_pressure));
-
-				debug.SendTo(diffuse_pressure, shader);
-				blocked.SendTo(diffuse_pressure, shader);
-				pressure.SendTo(diffuse_pressure, shader);
-				pressureRead.SendTo(diffuse_pressure, shader);
+				sendAll(diffuse_pressure);
 			}
+			// diffuse_dx
+			{
+				diffuse_dx = shader.FindKernel(nameof(diffuse_dx));
+				sendAll(diffuse_dx);
+			}
+			// diffuse_dy
+			{
+				diffuse_dy = shader.FindKernel(nameof(diffuse_dy));
+				sendAll(diffuse_dy);
+			}
+
 
 			// advect_pressure
 			{
 				advect_pressure = shader.FindKernel(nameof(advect_pressure));
-
-				dx.SendTo(advect_pressure, shader);
-				dy.SendTo(advect_pressure, shader);
-
-				debug.SendTo(advect_pressure, shader);
-				blocked.SendTo(advect_pressure, shader);
-				pressure.SendTo(advect_pressure, shader);
-				pressureRead.SendTo(advect_pressure, shader);
+				sendAll(advect_pressure);
+			}
+			// advect_dx
+			{
+				advect_dx = shader.FindKernel(nameof(advect_dx));
+				sendAll(advect_dx);
+			}
+			// advect_dy
+			{
+				advect_dy = shader.FindKernel(nameof(advect_dy));
+				sendAll(advect_dy);
 			}
 
-			// swap
+
+			// project_start
+			{
+				project_start = shader.FindKernel(nameof(project_start));
+				sendAll(project_start);
+			}
+			// project_loop
+			{
+				project_loop = shader.FindKernel(nameof(project_loop));
+				sendAll(project_loop);
+			}
+			// project_end
+			{
+				project_end = shader.FindKernel(nameof(project_end));
+				sendAll(project_end);
+			}
+
+
+			// swap_pressure
 			{
 				swap_pressure = shader.FindKernel(nameof(swap_pressure));
-
-				debug.SendTo(diffuse_pressure, shader);
-				pressure.SendTo(swap_pressure, shader);
-				pressureRead.SendTo(swap_pressure, shader);
+				sendAll(swap_pressure);
 			}
-
-			// render
+			// swap_dx
 			{
-				render_pressure = shader.FindKernel(nameof(render_pressure));
-
-				debug.SendTo(render_pressure, shader);
-				blocked.SendTo(render_pressure, shader);
-				pressure.SendTo(render_pressure, shader);
-				pressureRead.SendTo(render_pressure, shader);
-				shader.SetTexture(render_pressure, nameof(RenderTexture), RenderTexture);
+				swap_dx = shader.FindKernel(nameof(swap_dx));
+				sendAll(swap_dx);
 			}
+			// swap_dy
+			{
+				swap_dy = shader.FindKernel(nameof(swap_dy));
+				sendAll(swap_dy);
+			}
+		}
+		int i = 0;
+
+		public void Tick()
+		{
+			vel_step();
+			dense_step();
+			display();
+
+			debug.SendUpdatesToGpu();
+			Debug.Log(debug.cpuData[0]);
 		}
 
 		enum FieldType
@@ -273,7 +335,6 @@ namespace Assets.Scripts
 					Run(diffuse_dy);
 				if (FieldType.Pressure == type)
 					Run(diffuse_pressure);
-				Run(set_bnd_diffuse_pressure);
 			}
 		}
 
@@ -310,34 +371,16 @@ namespace Assets.Scripts
 
 		void dense_step()
 		{
-			FieldType pressure = FieldType.Pressure;
-			swap(pressure);
-			diffuse(pressure);
+			swap(FieldType.Pressure);
+			diffuse(FieldType.Pressure);
 
-			swap(pressure);
-			advect(pressure);
+			swap(FieldType.Pressure);
+			advect(FieldType.Pressure);
 		}
 
 		void display()
 		{
 			Run(render_pressure);
 		}
-
-		int i = 0;
-
-		public void Tick()
-		{
-			//vel_step();
-			//if (i < 2)
-			{
-				++i;
-				dense_step();
-				display();
-			}
-
-			debug.SendUpdatesToGpu();
-			Debug.Log(debug.cpuData[0]);
-		}
-
 	}
 }
