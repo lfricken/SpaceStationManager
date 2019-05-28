@@ -268,7 +268,9 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 
 	RenderTexture[pos] = c;
 
-	InterlockedAdd(debug[0], p * 1000);
+	// dont count the pressure in the boundaries!
+	if(!shouldSkip(pos))
+		InterlockedAdd(debug[0], p * 1000);
 }
 
 ///////////////
