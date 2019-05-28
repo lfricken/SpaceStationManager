@@ -78,9 +78,9 @@ namespace Assets.Scripts
 		readonly int numXYThreads = 16;
 		int threadGroups;
 
-		const float viscosityGlobal = 30f;
-		const int iterations = 30; // needs to be even because we are ping ponging values
-		const float dtGlobal = 0.1f / iterations;
+		const float viscosityGlobal = 0.1f;
+		const int iterations = 20; // needs to be even because we are ping ponging values
+		float dtGlobal = 0.1f;
 
 		ComputeShader shader;
 
@@ -119,8 +119,9 @@ namespace Assets.Scripts
 			SetupShaders(resolution);
 		}
 
-		public void ApplyDelta<T>(Vector2Int start, Vector2Int end, T delta, DataBuffer<T> tiles)
+		public void ApplyDelta<T>(Vector2Int start, Vector2Int size, T delta, DataBuffer<T> tiles)
 		{
+			Vector2Int end = start + size;
 			for (int x = start.x; x <= end.x; x++)
 			{
 				for (int y = start.y; y <= end.y; y++)
@@ -135,6 +136,7 @@ namespace Assets.Scripts
 		void SetupShaders(Vector3Int resolution)
 		{
 			shaderSizeX = resolution.x;
+			dtGlobal *= shaderSizeX;
 
 
 			pressure = new DataBuffer<float>(nameof(pressure), resolution);
@@ -164,15 +166,17 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
 			blocked.SendUpdatesToGpu();
 
-			//ApplyDelta(new Vector2Int(1, 1), new Vector2Int(16, 16), 0f, dx);
-			//dx.SendUpdatesToGpu();
+			ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, 4), 0.1f, dx);
+			dx.SendUpdatesToGpu();
 
 			var center = new Vector2Int(resolution.x / 2, resolution.y / 2);
 
-			pressureRead.AddDelta(center, 20);
+			var p = resolution.x * resolution.x / 2;
+
+			pressureRead.AddDelta(center, p);
 			pressureRead.SendUpdatesToGpu();
 
-			pressure.AddDelta(center, 20);
+			pressure.AddDelta(center, p);
 			pressure.SendUpdatesToGpu();
 
 			// shader
@@ -201,6 +205,19 @@ namespace Assets.Scripts
 				blocked.SendTo(diffuse_pressure, shader);
 				pressure.SendTo(diffuse_pressure, shader);
 				pressureRead.SendTo(diffuse_pressure, shader);
+			}
+
+			// advect_pressure
+			{
+				advect_pressure = shader.FindKernel(nameof(advect_pressure));
+
+				dx.SendTo(advect_pressure, shader);
+				dy.SendTo(advect_pressure, shader);
+
+				debug.SendTo(advect_pressure, shader);
+				blocked.SendTo(advect_pressure, shader);
+				pressure.SendTo(advect_pressure, shader);
+				pressureRead.SendTo(advect_pressure, shader);
 			}
 
 			// swap
@@ -297,8 +314,8 @@ namespace Assets.Scripts
 			swap(pressure);
 			diffuse(pressure);
 
-			//swap(pressure);
-			//advect(pressure);
+			swap(pressure);
+			advect(pressure);
 		}
 
 		void display()

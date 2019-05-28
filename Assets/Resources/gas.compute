@@ -102,10 +102,9 @@ void advect_core(float2 pos, int dim, int boundary, Array value, Array valueRead
 	int x0, y0, x1, y1;
 	float xStart, yStart;
 	float s0, t0, s1, t1; // interpolations
-	float deltaTime = dt;
 
-	xStart = pos.x - deltaTime * velX[at(pos)];
-	yStart = pos.y - deltaTime * velY[at(pos)];
+	xStart = pos.x - dt * velX[at(pos)];
+	yStart = pos.y - dt * velY[at(pos)];
 
 	xStart = clampy(xStart, dim);
 	x0 = (int)xStart;
@@ -190,10 +189,10 @@ void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure
 
 	float a = viscosity * deltaTime;
 
-	np += getDiffuse(pos, float2(1, 0), newPressure);
-	np += getDiffuse(pos, float2(0, 1), newPressure);
-	np += getDiffuse(pos, float2(-1, 0), newPressure);
-	np += getDiffuse(pos, float2(0, -1), newPressure);
+	np += getDiffuse(pos, +float2(1, 0), newPressure);
+	np += getDiffuse(pos, +float2(0, 1), newPressure);
+	np += getDiffuse(pos, -float2(1, 0), newPressure);
+	np += getDiffuse(pos, -float2(0, 1), newPressure);
 
 	np.x *= a;
 	np.x += oldPressure[at(pos)];
