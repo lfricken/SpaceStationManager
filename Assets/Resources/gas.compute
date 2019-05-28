@@ -104,8 +104,8 @@ void advect_core(float2 pos, int dim, int boundary, Array value, Array valueRead
 	float s0, t0, s1, t1; // interpolations
 	float deltaTime = dt;
 
-	xStart = pos.x - deltaTime * velX[at(pos.x, pos.y)];
-	yStart = pos.y - deltaTime * velY[at(pos.x, pos.y)];
+	xStart = pos.x - deltaTime * velX[at(pos)];
+	yStart = pos.y - deltaTime * velY[at(pos)];
 
 	xStart = clampy(xStart, dim);
 	x0 = (int)xStart;
@@ -120,7 +120,7 @@ void advect_core(float2 pos, int dim, int boundary, Array value, Array valueRead
 	t1 = yStart - y0;
 	t0 = 1 - t1;
 
-	value[at(pos.x, pos.y)] = (s0 * (t0 * valueRead[at(x0, y0)] + t1 * valueRead[at(x0, y1)]) + s1 * (t0 * valueRead[at(x1, y0)] + t1 * valueRead[at(x1, y1)]));
+	value[at(pos)] = (s0 * (t0 * valueRead[at(x0, y0)] + t1 * valueRead[at(x0, y1)]) + s1 * (t0 * valueRead[at(x1, y0)] + t1 * valueRead[at(x1, y1)]));
 
 	set_bnd(pos, boundary, value);
 }
@@ -129,9 +129,9 @@ void project_start_core(float2 pos, float dims, Array u, Array v, Array p, Array
 {
 	float h = float(1) / dims;
 
-	div[at(pos.x, pos.y)] = -0.5f * h * (u[at(pos.x + 1, pos.y)] - u[at(pos.x - 1, pos.y)] +
+	div[at(pos)] = -0.5f * h * (u[at(pos.x + 1, pos.y)] - u[at(pos.x - 1, pos.y)] +
 		v[at(pos.x, pos.y + 1)] - v[at(pos.x, pos.y - 1)]);
-	p[at(pos.x, pos.y)] = 0;
+	p[at(pos)] = 0;
 
 	set_bnd(pos, 0, div); set_bnd(pos, 0, p);
 }
@@ -140,7 +140,7 @@ void project_loop_core(float2 pos, float dims, Array u, Array v, Array p, Array 
 {
 	float h = float(1) / dims;
 
-	p[at(pos.x, pos.y)] = (div[at(pos.x, pos.y)] + p[at(pos.x - 1, pos.y)] + p[at(pos.x + 1, pos.y)] +
+	p[at(pos)] = (div[at(pos)] + p[at(pos.x - 1, pos.y)] + p[at(pos.x + 1, pos.y)] +
 		p[at(pos.x, pos.y - 1)] + p[at(pos.x, pos.y + 1)]) / 4;
 
 	set_bnd(pos, 0, p);
@@ -150,8 +150,8 @@ void project_end_core(float2 pos, float dims, Array u, Array v, Array p, Array d
 {
 	float h = float(1) / dims;
 
-	u[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
-	v[at(pos.x, pos.y)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
+	u[at(pos)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
+	v[at(pos)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
 
 	set_bnd(pos, 1, u); set_bnd(pos, 2, v);
 }
