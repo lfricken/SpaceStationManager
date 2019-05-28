@@ -351,9 +351,18 @@ namespace Assets.Scripts
 		void project()
 		{
 			Run(project_start);
+			// TODO move set_bnd here
+			// TODO move set_bnd here
+
 			for (int k = 0; k < iterations; ++k)
+			{
 				Run(project_loop);
+				// TODO move set_bnd here
+			}
+
 			Run(project_end);
+			// TODO move set_bnd here
+			// TODO move set_bnd here
 		}
 
 		void vel_step()
