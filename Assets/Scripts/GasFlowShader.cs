@@ -78,15 +78,17 @@ namespace Assets.Scripts
 		readonly int numXYThreads = 16;
 		int threadGroups;
 
-		readonly float viscosityGlobal = 1f;
-		readonly float dtGlobal = 0.1f;
-		readonly int iterations = 2; // needs to be even because we are ping ponging values
+		const float viscosityGlobal = 30f;
+		const int iterations = 30; // needs to be even because we are ping ponging values
+		const float dtGlobal = 0.1f / iterations;
 
 		ComputeShader shader;
 
 		int swap_dx;
 		int swap_dy;
 		int swap_pressure;
+
+		int set_bnd_diffuse_pressure;
 
 		int diffuse_dx;
 		int diffuse_dy;
@@ -165,10 +167,12 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(1, 1), new Vector2Int(16, 16), 0f, dx);
 			//dx.SendUpdatesToGpu();
 
-			pressureRead.AddDelta(new Vector2Int(15, 15), 500);
+			var center = new Vector2Int(resolution.x / 2, resolution.y / 2);
+
+			pressureRead.AddDelta(center, 20);
 			pressureRead.SendUpdatesToGpu();
 
-			pressure.AddDelta(new Vector2Int(15, 15), 500);
+			pressure.AddDelta(center, 20);
 			pressure.SendUpdatesToGpu();
 
 			// shader
@@ -179,6 +183,14 @@ namespace Assets.Scripts
 				shader.SetInt(nameof(shaderSizeX), shaderSizeX);
 				shader.SetFloat(nameof(viscosityGlobal), viscosityGlobal);
 				shader.SetFloat(nameof(dtGlobal), dtGlobal);
+			}
+
+			// set_bnd
+			{
+				set_bnd_diffuse_pressure = shader.FindKernel(nameof(set_bnd_diffuse_pressure));
+
+				pressure.SendTo(set_bnd_diffuse_pressure, shader);
+				pressureRead.SendTo(set_bnd_diffuse_pressure, shader);
 			}
 
 			// diffuse
@@ -244,6 +256,7 @@ namespace Assets.Scripts
 					Run(diffuse_dy);
 				if (FieldType.Pressure == type)
 					Run(diffuse_pressure);
+				Run(set_bnd_diffuse_pressure);
 			}
 		}
 

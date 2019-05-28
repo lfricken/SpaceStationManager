@@ -51,9 +51,10 @@ float clampy(float val, int dim)
 	return val;
 }
 
-void set_bnd(float2 pos, int boundary, Array tiles)
+void set_bnd(float2 pos, int b, Array x) // 
 {
 	int dims = shaderSizeX - 2;
+	int max = shaderSizeX - 1;
 	//int dims = shaderSizeX - 2;
 	//int innerEdgeLow = 1;
 	//int innerEdgeHigh = shaderSizeX - 2;
@@ -61,30 +62,39 @@ void set_bnd(float2 pos, int boundary, Array tiles)
 	//int outerEdgeLow = 0;
 	//int outerEdgeHigh = shaderSizeX - 1;
 
-	if(pos.x == 1)
+	float2 offset = float2(0, 0);
+
+	if(pos.x == 0)
 	{
-		tiles[at(0, pos.y)] = boundary == 1 ? -tiles[at(1, pos.y)] : tiles[at(1, pos.y)];
+		//offset.x = 1;
+		x[at(pos)] = b == 1 ? -x[at(1, pos.y)] : x[at(1, pos.y)];
 	}
-	else if(pos.x == dims)
+	if(pos.x == max)
 	{
-		tiles[at(dims + 1, pos.y)] = boundary == 1 ? -tiles[at(dims, pos.y)] : tiles[at(dims, pos.y)];
+		//offset.x = -1;
+		x[at(dims + 1, pos.y)] = b == 1 ? -x[at(dims, pos.y)] : x[at(dims, pos.y)];
 	}
-	else if(pos.y == 1)
+	if(pos.y == 0)
 	{
-		tiles[at(pos.x, 0)] = boundary == 2 ? -tiles[at(pos.x, 1)] : tiles[at(pos.x, 1)];
+		//offset.y = 1;
+		x[at(pos.x, 0)] = b == 2 ? -x[at(pos.x, 1)] : x[at(pos.x, 1)];
 	}
-	else if(pos.y == dims)
+	if(pos.y == max)
 	{
-		tiles[at(pos.x, dims + 1)] = boundary == 2 ? -tiles[at(pos.x, dims)] : tiles[at(pos.x, dims)];
+		//offset.y = -1;
+		x[at(pos.x, dims + 1)] = b == 2 ? -x[at(pos.x, dims)] : x[at(pos.x, dims)];
 	}
 
-	if((pos.x == 0 || pos.y == 0) && (pos.x == shaderSizeX - 1 || pos.y == shaderSizeX - 1))
+	//x[at(pos)] = x[at(pos + offset)];
+
+	if((pos.x == 0 || pos.x == shaderSizeX - 1) && (pos.y == 0 || pos.y == shaderSizeX - 1))
 	{
-		tiles[at(0, 0)] = 0.5f * (tiles[at(1, 0)] + tiles[at(0, 1)]);
-		tiles[at(0, dims + 1)] = 0.5f * (tiles[at(1, dims + 1)] + tiles[at(0, dims)]);
-		tiles[at(dims + 1, 0)] = 0.5f * (tiles[at(dims, 0)] + tiles[at(dims + 1, 1)]);
-		tiles[at(dims + 1, dims + 1)] = 0.5f * (tiles[at(dims, dims + 1)] + tiles[at(dims + 1, dims)]);
+		x[at(0, 0)] = 0.5*(x[at(1, 0)] + x[at(0, 1)]);
+		x[at(0, dims + 1)] = 0.5*(x[at(1, dims + 1)] + x[at(0, dims)]);
+		x[at(dims + 1, 0)] = 0.5*(x[at(dims, 0)] + x[at(dims + 1, 1)]);
+		x[at(dims + 1, dims + 1)] = 0.5*(x[at(dims, dims + 1)] + x[at(dims + 1, dims)]);
 	}
+	//x[at(pos)] = 1;
 }
 
 void advect_core(float2 pos, int dim, int boundary, Array value, Array valueRead, Array velX, Array velY, float dt)
@@ -150,14 +160,30 @@ float2 getDiffuse(float2 pos, float2 offset, Array newPressure)
 {
 	int newPos = at(pos + offset);
 	float p = newPressure[newPos];
-	int notBlocked = (blocked[newPos] * -1) + 1;
+	//int notBlocked = (blocked[newPos] * -1) + 1;
 
-	return float2(p, notBlocked);
+	return float2(p, 0);
+}
+
+bool shouldSkip(float2 pos)
+{
+	int max = shaderSizeX - 1;
+	if(pos.x == 0)
+		return true;
+	if(pos.x == max)
+		return true;
+	if(pos.y == 0)
+		return true;
+	if(pos.y == max)
+		return true;
+	return false;
 }
 
 void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure, float viscosity, float deltaTime)
 {
-	//if(blocked[at(pos)])
+	if(shouldSkip(pos))
+		return;
+	//if(blocked[at(pos)])//
 	//	return;
 
 	float2 np = float2(0, 0);
@@ -171,7 +197,7 @@ void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure
 
 	np.x *= a;
 	np.x += oldPressure[at(pos)];
-	np.x /= (1 + np.y * a);
+	np.x /= (1 + 4 * a);
 
 	newPressure[at(pos)] = np.x;
 
@@ -318,6 +344,17 @@ void project_loop(uint3 pix : SV_DispatchThreadID)
 void project_end(uint3 pix : SV_DispatchThreadID)
 {
 	project_end_core(pix.xy, shaderSizeX, dx, dy, dxRead, dyRead);
+}
+
+///////////////
+/// set_bnd ///
+///////////////
+#pragma kernel set_bnd_diffuse_pressure
+[numthreads(16, 16, 1)]
+void set_bnd_diffuse_pressure(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 0, pressure);
+	set_bnd(pix.xy, 0, pressureRead);
 }
 
 ////////////
