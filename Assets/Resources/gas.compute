@@ -208,11 +208,8 @@ void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure
 	debug[0] = 0;
 }
 
-float4 colorGradient(float value)
+float4 colorGradient(float value, float min, float  middle, float max)
 {
-	float min = 0;
-	float middle = 0.5;
-	float max = 1;
 	float4 color = float4(0, 0, 0, 1);
 
 	if(value == 0)
@@ -266,11 +263,11 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 	}
 	else
 	{
-		c = colorGradient(p);
+		c = colorGradient(p, 0, 0.5, 1);
 	}
 
 	RenderTexture[pos] = c;
-	VelocityMap[pos] = float4(1, 0, 1, 1);
+	VelocityMap[pos] = colorGradient(dxRead[at(pos)], 0, 0.5, 1);
 
 	// dont count the pressure in the boundaries!//
 	if(!shouldSkip(pos))
