@@ -80,7 +80,7 @@ namespace Assets.Scripts
 		int threadGroups;
 
 		const float viscosityGlobal = 0.1f;
-		const int iterations = 40; // needs to be even because we are ping ponging values
+		const int iterations = 20; // needs to be even because we are ping ponging values
 		float dtGlobal = 0.1f;
 
 		ComputeShader shader;
@@ -110,7 +110,6 @@ namespace Assets.Scripts
 		int copy_all;
 
 		int render_pressure;
-		int totalMass1000;
 		#endregion
 
 		public GasFlowGpu(Vector3Int resolution)
@@ -193,7 +192,7 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
 			blocked.SendUpdatesToGpu();
 
-			ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, resolution.y - 8), 0.5f, dx);
+			//ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, resolution.y - 8), 0.5f, dx);
 			dx.SendUpdatesToGpu();
 
 			var center = new Vector2Int(resolution.x - 2, resolution.y - 2);

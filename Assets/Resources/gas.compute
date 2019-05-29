@@ -23,14 +23,13 @@ RWTexture2D<float4> VelocityMap;
 int N;
 float viscosityGlobal;
 float dtGlobal;
-
-int totalMass1000;
 /////////////
 
 uint at(float2 pos)
 {
 	return pos.x + pos.y * (N + 2);
 }
+
 uint at(float x, float y)
 {
 	return x + y * (N + 2);
@@ -148,7 +147,7 @@ void project_loop_core(float2 pos, float dims, Array u, Array v, Array p, Array 
 	p[at(pos)] = (div[at(pos)] + p[at(pos.x - 1, pos.y)] + p[at(pos.x + 1, pos.y)] +
 		p[at(pos.x, pos.y - 1)] + p[at(pos.x, pos.y + 1)]) / 4;
 
-	set_bnd(pos, 0, p);
+	//set_bnd(pos, 0, p);
 }
 
 void project_end_core(float2 pos, float dims, Array u, Array v, Array p, Array div)
@@ -244,9 +243,6 @@ float4 colorGradient(float value, float min, float  middle, float max)
 [numthreads(16, 16, 1)]
 void render_pressure(uint3 pix : SV_DispatchThreadID)
 {
-	//if(pix.x == 0 || pix.y == 0)
-	//	return;
-
 	float2 pos = pix.xy;
 
 	float4 c = float4(1, 0, 1, 1);
@@ -264,7 +260,7 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 	}
 
 	RenderTexture[pos] = c;
-	VelocityMap[pos] = colorGradient(dx[at(pos)], 0.00, 0.05, 0.10);
+	VelocityMap[pos] = colorGradient(dx[at(pos)], -0.010, 0.00, 0.010);
 
 	// dont count the pressure in the boundaries!//
 	if(!shouldSkip(pos))
@@ -349,12 +345,12 @@ void project_end(uint3 pix : SV_DispatchThreadID)
 ///////////////
 /// set_bnd ///
 ///////////////
-#pragma kernel set_bnd_project_dxdy
+#pragma kernel set_bnd_project_dxdyRead
 [numthreads(16, 16, 1)]
-void set_bnd_project_dxdy(uint3 pix : SV_DispatchThreadID)
+void set_bnd_project_dxdyRead(uint3 pix : SV_DispatchThreadID)
 {
-	set_bnd(pix.xy, 1, dx);
-	set_bnd(pix.xy, 2, dy);
+	set_bnd(pix.xy, 0, dyRead);
+	set_bnd(pix.xy, 0, dxRead);
 }
 
 #pragma kernel set_bnd_p
@@ -364,12 +360,12 @@ void set_bnd_p(uint3 pix : SV_DispatchThreadID)
 	set_bnd(pix.xy, 0, dxRead);
 }
 
-#pragma kernel set_bnd_project_dxdyRead
+#pragma kernel set_bnd_project_dxdy
 [numthreads(16, 16, 1)]
-void set_bnd_project_dxdyRead(uint3 pix : SV_DispatchThreadID)
+void set_bnd_project_dxdy(uint3 pix : SV_DispatchThreadID)
 {
-	set_bnd(pix.xy, 1, dxRead);
-	set_bnd(pix.xy, 2, dyRead);
+	set_bnd(pix.xy, 1, dx);
+	set_bnd(pix.xy, 2, dy);
 }
 
 ////////////
@@ -401,8 +397,8 @@ void swap_dy(uint3 pix : SV_DispatchThreadID)
 void copy_all(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = pix.xy;
-	pressureRead[at(pos)] = pressure[at(pos)];//
-	dxRead[at(pos)] = dx[at(pos)];//
-	dyRead[at(pos)] = dy[at(pos)];//
+	pressureRead[at(pos)] = pressure[at(pos)];
+	dxRead[at(pos)] = dx[at(pos)];
+	dyRead[at(pos)] = dy[at(pos)];
 }
 
