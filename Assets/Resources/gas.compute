@@ -183,11 +183,11 @@ bool shouldSkip(float2 pos)
 	return false;
 }
 
-void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure, float viscosity, float deltaTime)
+void diffuse_loop(float2 pos, int boundary, Array newPressure, Array oldPressure, float diff, float dt)
 {
 	float2 np = float2(0, 0);
 
-	float a = viscosity * deltaTime;
+	float a = dt * diff * N * N;
 
 	np += getDiffuse(pos, +float2(1, 0), newPressure);
 	np += getDiffuse(pos, +float2(0, 1), newPressure);
@@ -260,7 +260,7 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 	}
 
 	RenderTexture[pos] = c;
-	VelocityMap[pos] = colorGradient(dx[at(pos)], -0.010, 0.00, 0.010);
+	VelocityMap[pos] = colorGradient(dx[at(pos)], -0.0010, 0.00, 0.0010);
 
 	// dont count the pressure in the boundaries!//
 	if(!shouldSkip(pos))
@@ -398,7 +398,7 @@ void copy_all(uint3 pix : SV_DispatchThreadID)
 {
 	float2 pos = pix.xy;
 	pressureRead[at(pos)] = pressure[at(pos)];
-	dxRead[at(pos)] = dx[at(pos)];
+	dx[at(pos)] = dx[at(pos)];
 	dyRead[at(pos)] = dy[at(pos)];
 }
 

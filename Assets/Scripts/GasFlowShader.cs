@@ -15,7 +15,7 @@ namespace Assets.Scripts
 		readonly string BufferName;
 		#endregion
 
-		public DataBuffer(string bufferName, Vector3Int resolution)
+		public DataBuffer(string bufferName, Vector3Int resolution, bool initializeDefaults = true)
 		{
 			modifications = new Dictionary<Vector2Int, Data>();
 			BufferName = bufferName;
@@ -23,6 +23,9 @@ namespace Assets.Scripts
 			xRes = resolution.x;
 			cpuData = new Data[resolution.x * resolution.y];
 			gpuBuffer = new ComputeBuffer(cpuData.Length, Marshal.SizeOf(typeof(Data)));
+			if (initializeDefaults)
+				for (int i = 0; i < cpuData.Length; ++i)
+					cpuData[i] = default;
 		}
 
 		int index(Vector2Int position)
@@ -48,6 +51,7 @@ namespace Assets.Scripts
 		public void SendTo(int handle, ComputeShader shader)
 		{
 			shader.SetBuffer(handle, BufferName, gpuBuffer);
+			gpuBuffer.SetData(cpuData);
 		}
 	}
 
@@ -79,9 +83,9 @@ namespace Assets.Scripts
 		readonly int numXYThreads = 16;
 		int threadGroups;
 
-		const float viscosityGlobal = 0.1f;
-		const int iterations = 20; // needs to be even because we are ping ponging values
-		float dtGlobal = 0.1f;
+		const float viscosityGlobal = 0.01f;
+		const int iterations = 30; // needs to be even because we are ping ponging values
+		float dtGlobal = 0.01f;
 
 		ComputeShader shader;
 
@@ -192,7 +196,7 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
 			blocked.SendUpdatesToGpu();
 
-			//ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, resolution.y - 8), 0.5f, dx);
+			ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, resolution.y - 8), 0.001f, dx);
 			dx.SendUpdatesToGpu();
 
 			var center = new Vector2Int(resolution.x - 2, resolution.y - 2);
@@ -339,8 +343,8 @@ namespace Assets.Scripts
 		{
 			vel_step();
 			dense_step();
+			//copy();
 			display();
-			copy();
 
 			debug.SendUpdatesToGpu();
 			Debug.Log(debug.cpuData[0]);

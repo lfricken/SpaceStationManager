@@ -11,7 +11,7 @@ public class GameManager : MonoBehaviour
 	void InitCanvas()
 	{
 		// this resolution must match that in gas.compute.index
-		Vector3Int resolution = new Vector3Int(32, 32, 32);
+		Vector3Int resolution = new Vector3Int(256, 256, 32);
 		gas = new GasFlowGpu(resolution);
 		//gas2 = new GasWorld<Tile>(new Vector2Int(resolution.x, resolution.y));
 
@@ -35,7 +35,7 @@ public class GameManager : MonoBehaviour
 	{
 		for (int i = 0; i < 1000; i++)
 		{
-			yield return new WaitForSeconds(0.05f);
+			yield return new WaitForSeconds(0.01f);
 			gas.Tick();
 		}
 	}
