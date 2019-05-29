@@ -125,7 +125,7 @@ void advect_core(double2 pos, int N, int b, Array d, Array d0, Array u, Array v,
 	d[at(i, j)] = s0 * (t0*d0[at(i0, j0)] + t1 * d0[at(i0, j1)]) +
 		s1 * (t0*d0[at(i1, j0)] + t1 * d0[at(i1, j1)]);
 
-	set_bnd(pos, b, d);
+	//set_bnd(pos, b, d);
 }
 
 void project_start_core(double2 pos, double dims, Array u, Array v, Array p, Array div)
@@ -199,7 +199,7 @@ void diffuse_loop(double2 pos, int boundary, Array newPressure, Array oldPressur
 
 	newPressure[at(pos)] = np.x;
 
-	set_bnd(pos, boundary, newPressure);
+	//set_bnd(pos, boundary, newPressure);
 	debug[0] = 0;
 }
 
@@ -257,13 +257,16 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 	{
 		c = colorGradient(p, 0, 0.5, 1);
 	}
+	// dont count the pressure in the boundaries!//
+	if(!shouldSkip(pos))
+		InterlockedAdd(debug[0], p * 1000);
+	else
+		c = float4(0, 0, 0, 1);
+
 
 	RenderTexture[pos] = c;
 	VelocityMap[pos] = colorGradient(dx[at(pos)], -1.0, 0.0, 1.0);
 
-	// dont count the pressure in the boundaries!//
-	if(!shouldSkip(pos))
-		InterlockedAdd(debug[0], p * 1000);
 }
 
 ///////////////
@@ -364,6 +367,47 @@ void set_bnd_p(uint3 pix : SV_DispatchThreadID)
 void set_bnd_project_dxdy(uint3 pix : SV_DispatchThreadID)
 {
 	set_bnd(pix.xy, 1, dx);
+	set_bnd(pix.xy, 2, dy);
+}
+
+
+
+#pragma kernel set_bnd_advect_pressure
+[numthreads(16, 16, 1)]
+void set_bnd_advect_pressure(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 0, pressure);
+}
+#pragma kernel set_bnd_advect_dx
+[numthreads(16, 16, 1)]
+void set_bnd_advect_dx(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 1, dx);
+}
+#pragma kernel set_bnd_advect_dy
+[numthreads(16, 16, 1)]
+void set_bnd_advect_dy(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 2, dy);
+}
+
+
+#pragma kernel set_bnd_diffuse_pressure
+[numthreads(16, 16, 1)]
+void set_bnd_diffuse_pressure(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 0, pressure);
+}
+#pragma kernel set_bnd_diffuse_dx
+[numthreads(16, 16, 1)]
+void set_bnd_diffuse_dx(uint3 pix : SV_DispatchThreadID)
+{
+	set_bnd(pix.xy, 1, dx);
+}
+#pragma kernel set_bnd_diffuse_dy
+[numthreads(16, 16, 1)]
+void set_bnd_diffuse_dy(uint3 pix : SV_DispatchThreadID)
+{
 	set_bnd(pix.xy, 2, dy);
 }
 

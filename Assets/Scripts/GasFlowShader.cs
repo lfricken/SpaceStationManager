@@ -109,6 +109,10 @@ namespace Assets.Scripts
 		int set_bnd_p;
 		int set_bnd_project_dxdy;
 
+		int set_bnd_advect_pressure;
+		int set_bnd_advect_dx;
+		int set_bnd_advect_dy;
+
 		int copy_all;
 
 		int render_pressure;
@@ -192,12 +196,13 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
 			blocked.SendUpdatesToGpu();
 
-			ApplyDelta(new Vector2Int(0 + 50, 0 + 50), new Vector2Int(resolution.x - 100, resolution.y - 100), 1f, dx);
+			ApplyDelta(new Vector2Int(0 + 0, 0 + 0), new Vector2Int(resolution.x - 1, resolution.y - 1), 0.5f, dx);
 			dx.SendUpdatesToGpu();
-			ApplyDelta(new Vector2Int(0 + 50, 0 + 50), new Vector2Int(resolution.x - 100, resolution.y - 100), 1f, dxRead);
-			dxRead.SendUpdatesToGpu();
+			ApplyDelta(new Vector2Int(0 + 0, 0 + 0), new Vector2Int(resolution.x - 1, resolution.y - 1), 0.5f, dy);
+			dy.SendUpdatesToGpu();
 
-			var center = new Vector2Int(resolution.x / 2, resolution.y / 2);
+
+			var center = new Vector2Int(5, 5);// new Vector2Int(resolution.x / 2, resolution.y / 2);
 
 			var p = resolution.x * resolution.x / 2;
 
@@ -301,17 +306,30 @@ namespace Assets.Scripts
 				set_bnd_project_dxdy = shader.FindKernel(nameof(set_bnd_project_dxdy));
 				sendAll(set_bnd_project_dxdy);
 			}
-
 			// set_bnd_p
 			{
 				set_bnd_p = shader.FindKernel(nameof(set_bnd_p));
 				sendAll(set_bnd_p);
 			}
-
 			// set_bnd_project_dxdyRead
 			{
 				set_bnd_project_dxdyRead = shader.FindKernel(nameof(set_bnd_project_dxdyRead));
 				sendAll(set_bnd_project_dxdyRead);
+			}
+			// set_bnd_advect_pressure
+			{
+				set_bnd_advect_pressure = shader.FindKernel(nameof(set_bnd_advect_pressure));
+				sendAll(set_bnd_advect_pressure);
+			}
+			// set_bnd_advect_dx
+			{
+				set_bnd_advect_dx = shader.FindKernel(nameof(set_bnd_advect_dx));
+				sendAll(set_bnd_advect_dx);
+			}
+			// set_bnd_advect_dy
+			{
+				set_bnd_advect_dy = shader.FindKernel(nameof(set_bnd_advect_dy));
+				sendAll(set_bnd_advect_dy);
 			}
 
 			// copy_all
@@ -364,22 +382,40 @@ namespace Assets.Scripts
 			for (int k = 0; k < iterations; ++k)
 			{
 				if (FieldType.Pressure == type)
+				{
 					Run(diffuse_pressure);
+					Run(set_bnd_advect_pressure);
+				}
 				if (FieldType.DeltaX == type)
+				{
 					Run(diffuse_dx);
+					Run(set_bnd_advect_dx);
+				}
 				if (FieldType.DeltaY == type)
+				{
 					Run(diffuse_dy);
+					Run(set_bnd_advect_dy);
+				}
 			}
 		}
 
 		void advect(FieldType type)
 		{
 			if (FieldType.Pressure == type)
+			{
 				Run(advect_pressure);
+				Run(set_bnd_advect_pressure);
+			}
 			if (FieldType.DeltaX == type)
+			{
 				Run(advect_dx);
+				Run(set_bnd_advect_dx);
+			}
 			if (FieldType.DeltaY == type)
+			{
 				Run(advect_dy);
+				Run(set_bnd_advect_dy);
+			}
 		}
 
 		void project()
