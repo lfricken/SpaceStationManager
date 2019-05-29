@@ -83,9 +83,9 @@ namespace Assets.Scripts
 		readonly int numXYThreads = 16;
 		int threadGroups;
 
-		const double viscosityGlobal = 0.01f;
+		const float viscosityGlobal = 0.01f;
 		const int iterations = 30; // needs to be even because we are ping ponging values
-		double dtGlobal = 0.01f;
+		const float dtGlobal = 0.01f;
 
 		ComputeShader shader;
 
@@ -164,8 +164,6 @@ namespace Assets.Scripts
 		void SetupShaders(Vector3Int resolution)
 		{
 			shaderSizeX = resolution.x;
-			dtGlobal *= shaderSizeX;
-
 
 			pressure = new DataBuffer<double>(nameof(pressure), resolution);
 			pressureRead = new DataBuffer<double>(nameof(pressureRead), resolution);
@@ -194,9 +192,9 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
 			blocked.SendUpdatesToGpu();
 
-			ApplyDelta(new Vector2Int(0 + 50, 0 + 50), new Vector2Int(resolution.x - 100, resolution.y - 100), 5f, dx);
+			ApplyDelta(new Vector2Int(0 + 50, 0 + 50), new Vector2Int(resolution.x - 100, resolution.y - 100), 1f, dx);
 			dx.SendUpdatesToGpu();
-			ApplyDelta(new Vector2Int(0 + 50, 0 + 50), new Vector2Int(resolution.x - 100, resolution.y - 100), 5f, dxRead);
+			ApplyDelta(new Vector2Int(0 + 50, 0 + 50), new Vector2Int(resolution.x - 100, resolution.y - 100), 1f, dxRead);
 			dxRead.SendUpdatesToGpu();
 
 			var center = new Vector2Int(resolution.x / 2, resolution.y / 2);
@@ -217,8 +215,8 @@ namespace Assets.Scripts
 				int N = shaderSizeX - 2;
 				shader.SetInt(nameof(shaderSizeX), shaderSizeX);
 				shader.SetInt(nameof(N), N);
-				//shader.SetFloat(nameof(viscosityGlobal), viscosityGlobal);
-				//shader.SetFloat(nameof(dtGlobal), dtGlobal);
+				shader.SetFloat(nameof(viscosityGlobal), viscosityGlobal);
+				shader.SetFloat(nameof(dtGlobal), dtGlobal);
 			}
 
 			// render_pressure

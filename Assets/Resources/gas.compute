@@ -1,5 +1,4 @@
-﻿#pragma enable_d3d11_debug_symbols
-
+﻿
 typedef RWStructuredBuffer<double> Array;
 typedef RWStructuredBuffer<int> ArrayInt;
 
@@ -21,8 +20,8 @@ RWTexture2D<float4> VelocityMap;
 
 /////////////
 int N;
-//double viscosityGlobal = 0.01;
-//double dtGlobal = 0.01;
+float viscosityGlobal;
+float dtGlobal;
 /////////////
 
 uint at(double2 pos)
@@ -152,7 +151,7 @@ void project_loop_core(double2 pos, double dims, Array u, Array v, Array p, Arra
 
 void project_end_core(double2 pos, double dims, Array u, Array v, Array p, Array div)
 {
-	double h = double(1) / dims * 50;
+	double h = double(1) / dims;
 
 	u[at(pos)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
 	v[at(pos)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
@@ -269,26 +268,26 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 
 ///////////////
 /// diffuse ///
-///////////////
+////////////////
 #pragma kernel diffuse_pressure
 [numthreads(16, 16, 1)]
 void diffuse_pressure(uint3 pix : SV_DispatchThreadID)
 {
-	diffuse_loop(pix.xy, 0, pressure, pressureRead, 0.01, 0.01);
+	diffuse_loop(pix.xy, 0, pressure, pressureRead, viscosityGlobal, dtGlobal);
 }
 
 #pragma kernel diffuse_dx
 [numthreads(16, 16, 1)]
 void diffuse_dx(uint3 pix : SV_DispatchThreadID)
 {
-	diffuse_loop(pix.xy, 1, dx, dxRead, 0.01, 0.01);
+	diffuse_loop(pix.xy, 1, dx, dxRead, viscosityGlobal, dtGlobal);
 }
 
 #pragma kernel diffuse_dy
 [numthreads(16, 16, 1)]
 void diffuse_dy(uint3 pix : SV_DispatchThreadID)
 {
-	diffuse_loop(pix.xy, 2, dy, dyRead, 0.01, 0.01);
+	diffuse_loop(pix.xy, 2, dy, dyRead, viscosityGlobal, dtGlobal);
 }
 
 //////////////
@@ -299,7 +298,7 @@ void diffuse_dy(uint3 pix : SV_DispatchThreadID)
 void advect_pressure(uint3 pix : SV_DispatchThreadID)
 {
 	//advect ( N, 0, x, x0, u, v, dt );
-	advect_core(pix.xy, N, 0, pressure, pressureRead, dx, dy, 0.01);
+	advect_core(pix.xy, N, 0, pressure, pressureRead, dx, dy, dtGlobal);
 }
 
 #pragma kernel advect_dx
@@ -307,7 +306,7 @@ void advect_pressure(uint3 pix : SV_DispatchThreadID)
 void advect_dx(uint3 pix : SV_DispatchThreadID)
 {
 	//advect ( N, 1, u, u0, u0, v0, dt ); 
-	advect_core(pix.xy, N, 1, dx, dxRead, dxRead, dyRead, 0.01);
+	advect_core(pix.xy, N, 1, dx, dxRead, dxRead, dyRead, dtGlobal);
 }
 
 #pragma kernel advect_dy
@@ -315,7 +314,7 @@ void advect_dx(uint3 pix : SV_DispatchThreadID)
 void advect_dy(uint3 pix : SV_DispatchThreadID)
 {
 	//advect ( N, 2, v, v0, u0, v0, dt );//
-	advect_core(pix.xy, N, 2, dy, dyRead, dxRead, dyRead, 0.01);
+	advect_core(pix.xy, N, 2, dy, dyRead, dxRead, dyRead, dtGlobal);
 }
 
 ///////////////
