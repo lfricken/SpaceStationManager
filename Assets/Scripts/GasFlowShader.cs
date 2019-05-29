@@ -89,27 +89,25 @@ namespace Assets.Scripts
 
 		ComputeShader shader;
 
+		int swap_pressure;
 		int swap_dx;
 		int swap_dy;
-		int swap_pressure;
 
-		int set_bnd_diffuse_pressure;
-
+		int diffuse_pressure;
 		int diffuse_dx;
 		int diffuse_dy;
-		int diffuse_pressure;
 
+		int advect_pressure;
 		int advect_dx;
 		int advect_dy;
-		int advect_pressure;
 
 		int project_start;
 		int project_loop;
 		int project_end;
 
-		int set_bnd_project_dxdy;
-		int set_bnd_p;
 		int set_bnd_project_dxdyRead;
+		int set_bnd_p;
+		int set_bnd_project_dxdy;
 
 		int copy_all;
 
@@ -196,10 +194,10 @@ namespace Assets.Scripts
 			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
 			blocked.SendUpdatesToGpu();
 
-			ApplyDelta(new Vector2Int(0 + 3, 0 + 3), new Vector2Int(resolution.x - 8, resolution.y - 8), 0.001f, dx);
+			ApplyDelta(new Vector2Int(0 + 50, 0 + 50), new Vector2Int(resolution.x - 100, resolution.y - 100), 0.1f, dx);
 			dx.SendUpdatesToGpu();
 
-			var center = new Vector2Int(resolution.x - 2, resolution.y - 2);
+			var center = new Vector2Int(resolution.x / 2, resolution.y / 2);
 
 			var p = resolution.x * resolution.x / 2;
 
@@ -220,17 +218,6 @@ namespace Assets.Scripts
 				shader.SetFloat(nameof(viscosityGlobal), viscosityGlobal);
 				shader.SetFloat(nameof(dtGlobal), dtGlobal);
 			}
-
-			//// set_bnd
-			//{
-			//	set_bnd_diffuse_pressure = shader.FindKernel(nameof(set_bnd_diffuse_pressure));
-			//	sendAll(set_bnd_diffuse_pressure);
-
-			//	//pressure.SendTo(set_bnd_diffuse_pressure, shader);
-			//	//pressureRead.SendTo(set_bnd_diffuse_pressure, shader);
-			//}//
-
-
 
 			// render_pressure
 			{
