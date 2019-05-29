@@ -107,6 +107,8 @@ namespace Assets.Scripts
 		int set_bnd_p;
 		int set_bnd_project_dxdyRead;
 
+		int copy_all;
+
 		int render_pressure;
 		int totalMass1000;
 		#endregion
@@ -149,9 +151,9 @@ namespace Assets.Scripts
 			blocked.SendTo(handle, shader);
 
 			dx.SendTo(handle, shader);
-			dy.SendTo(handle, shader);
-
 			dxRead.SendTo(handle, shader);
+
+			dy.SendTo(handle, shader);
 			dyRead.SendTo(handle, shader);
 
 			pressure.SendTo(handle, shader);
@@ -209,7 +211,9 @@ namespace Assets.Scripts
 
 			// globals
 			{
+				int N = shaderSizeX - 2;
 				shader.SetInt(nameof(shaderSizeX), shaderSizeX);
+				shader.SetInt(nameof(N), N);
 				shader.SetFloat(nameof(viscosityGlobal), viscosityGlobal);
 				shader.SetFloat(nameof(dtGlobal), dtGlobal);
 			}
@@ -319,6 +323,17 @@ namespace Assets.Scripts
 				set_bnd_project_dxdyRead = shader.FindKernel(nameof(set_bnd_project_dxdyRead));
 				sendAll(set_bnd_project_dxdyRead);
 			}
+
+			// copy_all
+			{
+				copy_all = shader.FindKernel(nameof(copy_all));
+				sendAll(copy_all);
+			}
+		}
+
+		void copy()
+		{
+			Run(copy_all);
 		}
 
 		public void Tick()
@@ -326,6 +341,7 @@ namespace Assets.Scripts
 			vel_step();
 			dense_step();
 			display();
+			copy();
 
 			debug.SendUpdatesToGpu();
 			Debug.Log(debug.cpuData[0]);
