@@ -1,16 +1,16 @@
 ﻿
-struct Delta
+struct DeltaType
 {
 	double deltas[4];
 };
 
-typedef RWStructuredBuffer<Delta> ArrayDelta;
+typedef RWStructuredBuffer<DeltaType> ArrayDelta;
 typedef RWStructuredBuffer<double> ArrayDouble;
 typedef RWStructuredBuffer<int> ArrayInt;
 
 // Globals ///
-ArrayDelta DeltasRead;
-ArrayDelta Deltas;
+ArrayDelta DeltaRead;
+ArrayDelta Delta;
 
 ArrayDouble PressureRead;
 ArrayDouble Pressure;
@@ -21,14 +21,16 @@ ArrayInt DebugData;
 RWTexture2D<float4> RenderTexture;
 RWTexture2D<float4> VelocityMap;
 
-/////////////
-int NumSides = 4;
+//////////////
+int NumSides;
+float Rate;
 int ResolutionX;
 float ViscosityGlobal;
 float DtGlobal;
+
 static int2 Offsets[4] =
 {
-	+int2(1, 2047483647),
+	+int2(1, 0),
 	-int2(0, 1),
 	-int2(1, 0),
 	+int2(0, 1)
@@ -93,7 +95,7 @@ void render(uint3 pix : SV_DispatchThreadID)
 	}
 	else
 	{
-		c = colorGradient(p, 0, 0.5, 1);
+		c = colorGradient(p, 0, 10, 20);
 	}
 
 	// dont count the pressure in the boundaries
@@ -101,7 +103,12 @@ void render(uint3 pix : SV_DispatchThreadID)
 		InterlockedAdd(DebugData[0], int(p * 1000));
 
 	RenderTexture[pos] = c;
-	VelocityMap[pos] = colorGradient(Deltas[at(pos)].deltas[0], -1.0, 0.0, 1.0);
+
+	double deltaSum = 0;
+	for(int side = 0; side < NumSides; ++side)
+		deltaSum += Delta[at(pos)].deltas[side];
+
+	VelocityMap[pos] = colorGradient(deltaSum, 0, 5, 10);
 }
 
 ////////////
@@ -114,6 +121,7 @@ void copy_all(uint3 pix : SV_DispatchThreadID)
 	//swap_core(pix.xy, pressure, pressureRead);
 }
 
+
 void calc_forces(int2 pos, ArrayDouble p, ArrayDelta d)
 {
 	for(int side = 0; side < NumSides; ++side)
@@ -122,27 +130,34 @@ void calc_forces(int2 pos, ArrayDouble p, ArrayDelta d)
 		int2 offset = Offsets[side];
 		double otherPressure = p[at(pos + offset)];
 		double difference = pressure - otherPressure;
-		d[at(pos)].deltas[side] += max(0, difference / 10.0);
+		d[at(pos)].deltas[side] += max(0, difference * Rate);
 	}
-	DebugData[0] = 0;
+	//DebugData[0] = 0;
 }
+#pragma kernel calc_diffusion_forces
+[numthreads(16, 16, 1)]
+void calc_diffusion_forces(uint3 pix : SV_DispatchThreadID)
+{
+	calc_forces(pix.xy, Pressure, Delta);
+}
+
+void move_gas(int2 pos, ArrayDouble p, ArrayDouble p0, ArrayDelta d)
+{
+
+}
+
 #pragma kernel apply_diffusion_forces
 [numthreads(16, 16, 1)]
 void apply_diffusion_forces(uint3 pix : SV_DispatchThreadID)
 {
-	calc_forces(pix.xy, Pressure, Deltas);
+	move_gas(pix.xy, Pressure, PressureRead, Delta);
 }
+
+
 #pragma kernel diffuse_forces
 [numthreads(16, 16, 1)]
 void diffuse_forces(uint3 pix : SV_DispatchThreadID)
 {
 	for(int side = 0; side < NumSides; ++side)
-		Deltas[at(pix.xy)].deltas[side] = 0;
-}
-
-#pragma kernel setup
-[numthreads(1, 1, 1)]
-void setup(uint3 pix : SV_DispatchThreadID)
-{
-
+		Delta[at(pix.xy)].deltas[side] = 0;
 }

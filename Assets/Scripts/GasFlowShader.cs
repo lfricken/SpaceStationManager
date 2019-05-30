@@ -18,8 +18,8 @@ namespace Assets.Scripts
 		public Vector3Int Resolution;
 
 		#region GPU
-		DataBuffer<Delta> DeltasRead;
-		DataBuffer<Delta> Deltas;
+		DataBuffer<Delta> DeltaRead;
+		DataBuffer<Delta> Delta;
 
 		DataBuffer<double> PressureRead;
 		DataBuffer<double> Pressure;
@@ -30,7 +30,8 @@ namespace Assets.Scripts
 		public RenderTexture RenderTexture;
 		public RenderTexture VelocityMap;
 
-		int NumSides = 4;
+		const int NumSides = 4;
+		const float Rate = 0.1f;
 		int ResolutionX;
 		const float ViscosityGlobal = 0.01f;
 		const float DtGlobal = 0.01f;
@@ -43,7 +44,7 @@ namespace Assets.Scripts
 		#endregion
 
 		#region Kernels
-		int setup;
+		int calc_diffusion_forces;
 		int apply_diffusion_forces;
 		int diffuse_forces;
 		int copy_all;
@@ -85,8 +86,8 @@ namespace Assets.Scripts
 
 		void sendAll(int handle)
 		{
-			DeltasRead.SendTo(handle, shader);
-			Deltas.SendTo(handle, shader);
+			DeltaRead.SendTo(handle, shader);
+			Delta.SendTo(handle, shader);
 
 			PressureRead.SendTo(handle, shader);
 			Pressure.SendTo(handle, shader);
@@ -99,8 +100,8 @@ namespace Assets.Scripts
 		{
 			ResolutionX = resolution.x;
 
-			DeltasRead = new DataBuffer<Delta>(nameof(DeltasRead), resolution);
-			Deltas = new DataBuffer<Delta>(nameof(Deltas), resolution);
+			DeltaRead = new DataBuffer<Delta>(nameof(DeltaRead), resolution);
+			Delta = new DataBuffer<Delta>(nameof(Delta), resolution);
 
 			PressureRead = new DataBuffer<double>(nameof(PressureRead), resolution);
 			Pressure = new DataBuffer<double>(nameof(Pressure), resolution);
@@ -124,8 +125,8 @@ namespace Assets.Scripts
 			IsBlocked.SendUpdatesToGpu();
 
 			Delta d = new Delta { r = 1, d = 1, l = 1, u = 1, };
-			ApplyDelta(new Vector2Int(2, 2), new Vector2Int(5, 1), d, Deltas);
-			Deltas.SendUpdatesToGpu();
+			ApplyDelta(new Vector2Int(2, 2), new Vector2Int(5, 1), d, Delta);
+			Delta.SendUpdatesToGpu();
 
 			//// pressure
 			//ApplyDelta(new Vector2Int(5, 5), new Vector2Int(1, 1), 10f, Pressure);
@@ -151,10 +152,11 @@ namespace Assets.Scripts
 
 			// globals
 			{
+				shader.SetInt(nameof(NumSides), NumSides);
+				shader.SetFloat(nameof(Rate), Rate);
 				shader.SetInt(nameof(ResolutionX), ResolutionX);
 				shader.SetFloat(nameof(ViscosityGlobal), ViscosityGlobal);
 				shader.SetFloat(nameof(DtGlobal), DtGlobal);
-				shader.SetInt(nameof(NumSides), NumSides);
 			}
 			// render
 			{
@@ -163,6 +165,11 @@ namespace Assets.Scripts
 				sendAll(render);
 				shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
 				shader.SetTexture(render, nameof(VelocityMap), VelocityMap);
+			}
+			// calc_diffusion_forces
+			{
+				calc_diffusion_forces = shader.FindKernel(nameof(calc_diffusion_forces));
+				sendAll(calc_diffusion_forces);
 			}
 			// apply_diffusion_forces
 			{
@@ -179,20 +186,13 @@ namespace Assets.Scripts
 				copy_all = shader.FindKernel(nameof(copy_all));
 				sendAll(copy_all);
 			}
-			//setup
-			{
-				setup = shader.FindKernel(nameof(setup));
-				sendAll(setup);
-			}
-
-			Run(setup);
 		}
 
 		public void Tick()
 		{
-			//Run(apply_diffusion_forces);
-			//Run(diffuse_forces);
+			Run(calc_diffusion_forces);
 			Run(render);
+			Run(diffuse_forces);
 
 			DebugData.SendUpdatesToGpu();
 
