@@ -5,117 +5,49 @@ using UnityEngine;
 
 namespace Assets.Scripts
 {
-	public class DataBuffer<Data>
+	struct Delta
 	{
-		#region Buffer Data
-		ComputeBuffer gpuBuffer;
-		public Data[] cpuData;
-		int xRes;
-		Dictionary<Vector2Int, Data> modifications;
-		readonly string BufferName;
-		#endregion
-
-		public DataBuffer(string bufferName, Vector3Int resolution, bool initializeDefaults = true)
-		{
-			modifications = new Dictionary<Vector2Int, Data>();
-			BufferName = bufferName;
-
-			xRes = resolution.x;
-			cpuData = new Data[resolution.x * resolution.y];
-			gpuBuffer = new ComputeBuffer(cpuData.Length, Marshal.SizeOf(typeof(Data)));
-			if (initializeDefaults)
-				for (int i = 0; i < cpuData.Length; ++i)
-					cpuData[i] = default;
-		}
-
-		int index(Vector2Int position)
-		{
-			return position.x + position.y * xRes;
-		}
-
-		public void AddDelta(Vector2Int position, Data data)
-		{
-			modifications[position] = data;
-		}
-
-		public void SendUpdatesToGpu()
-		{
-			gpuBuffer.GetData(cpuData);
-			foreach (var kvp in modifications)
-			{
-				cpuData[index(kvp.Key)] = kvp.Value;
-			}
-			gpuBuffer.SetData(cpuData);
-		}
-
-		public void SendTo(int handle, ComputeShader shader)
-		{
-			shader.SetBuffer(handle, BufferName, gpuBuffer);
-			gpuBuffer.SetData(cpuData);
-		}
+		public double r;
+		public double d;
+		public double l;
+		public double u;
 	}
 
 	public class GasFlowGpu
 	{
 		public Vector3Int Resolution;
 
-		DataBuffer<double> pressureRead;
-		DataBuffer<double> pressure;
+		#region GPU
+		DataBuffer<Delta> DeltasRead;
+		DataBuffer<Delta> Deltas;
 
-		DataBuffer<int> blocked;
+		DataBuffer<double> PressureRead;
+		DataBuffer<double> Pressure;
 
-		DataBuffer<double> dxRead;
-		DataBuffer<double> dx;
+		DataBuffer<int> IsBlocked;
+		DataBuffer<int> DebugData;
 
-		DataBuffer<double> dyRead;
-		DataBuffer<double> dy;
-
-		DataBuffer<int> debug;
-
-		int shaderSizeX;
-
-		#region Shader
 		public RenderTexture RenderTexture;
 		public RenderTexture VelocityMap;
-		/// <summary>
-		/// If you update this, you need to update gas.compute!
-		/// </summary>
-		readonly int numXYThreads = 16;
+
+		int NumSides = 4;
+		int ResolutionX;
+		const float ViscosityGlobal = 0.01f;
+		const float DtGlobal = 0.01f;
+		#endregion
+
+		#region Shader
+		readonly int numXYThreads = 16; // If you update this, you need to update gas.compute!
 		int threadGroups;
-
-		const float viscosityGlobal = 0.01f;
-		const int iterations = 30; // needs to be even because we are ping ponging values
-		const float dtGlobal = 0.01f;
-
 		ComputeShader shader;
+		#endregion
 
-		int swap_pressure;
-		int swap_dx;
-		int swap_dy;
-
-		int diffuse_pressure;
-		int diffuse_dx;
-		int diffuse_dy;
-
-		int advect_pressure;
-		int advect_dx;
-		int advect_dy;
-
-		int project_start;
-		int project_loop;
-		int project_end;
-
-		int set_bnd_project_dxdyRead;
-		int set_bnd_p;
-		int set_bnd_project_dxdy;
-
-		int set_bnd_advect_pressure;
-		int set_bnd_advect_dx;
-		int set_bnd_advect_dy;
-
+		#region Kernels
+		int setup;
+		int apply_diffusion_forces;
+		int diffuse_forces;
 		int copy_all;
-
-		int render_pressure;
+		int render;
 		#endregion
 
 		public GasFlowGpu(Vector3Int resolution)
@@ -133,6 +65,7 @@ namespace Assets.Scripts
 			VelocityMap.Create();
 			VelocityMap.filterMode = FilterMode.Point;
 
+			SetupData(resolution);
 			SetupShaders(resolution);
 		}
 
@@ -152,312 +85,123 @@ namespace Assets.Scripts
 
 		void sendAll(int handle)
 		{
-			debug.SendTo(handle, shader);
-			blocked.SendTo(handle, shader);
+			DeltasRead.SendTo(handle, shader);
+			Deltas.SendTo(handle, shader);
 
-			dx.SendTo(handle, shader);
-			dxRead.SendTo(handle, shader);
+			PressureRead.SendTo(handle, shader);
+			Pressure.SendTo(handle, shader);
 
-			dy.SendTo(handle, shader);
-			dyRead.SendTo(handle, shader);
+			IsBlocked.SendTo(handle, shader);
+			DebugData.SendTo(handle, shader);
+		}
 
-			pressure.SendTo(handle, shader);
-			pressureRead.SendTo(handle, shader);
+		void SetupData(Vector3Int resolution)
+		{
+			ResolutionX = resolution.x;
+
+			DeltasRead = new DataBuffer<Delta>(nameof(DeltasRead), resolution);
+			Deltas = new DataBuffer<Delta>(nameof(Deltas), resolution);
+
+			PressureRead = new DataBuffer<double>(nameof(PressureRead), resolution);
+			Pressure = new DataBuffer<double>(nameof(Pressure), resolution);
+
+			IsBlocked = new DataBuffer<int>(nameof(IsBlocked), resolution);
+			DebugData = new DataBuffer<int>(nameof(DebugData), new Vector3Int(10, 1, 1));
+
+			//for (int x = 0; x < resolution.x; x++)
+			//{
+			//	IsBlocked.AddDelta(new Vector2Int(x, 0), 1);
+			//	IsBlocked.AddDelta(new Vector2Int(x, resolution.y - 1), 1);
+			//}
+			//for (int y = 0; y < resolution.y; y++)
+			//{
+			//	IsBlocked.AddDelta(new Vector2Int(0, y), 1);
+			//	IsBlocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
+			//}
+
+			// blocked
+			ApplyDelta(new Vector2Int(2, 2), new Vector2Int(5, 1), 1, IsBlocked);
+			IsBlocked.SendUpdatesToGpu();
+
+			Delta d = new Delta { r = 1, d = 1, l = 1, u = 1, };
+			ApplyDelta(new Vector2Int(2, 2), new Vector2Int(5, 1), d, Deltas);
+			Deltas.SendUpdatesToGpu();
+
+			//// pressure
+			//ApplyDelta(new Vector2Int(5, 5), new Vector2Int(1, 1), 10f, Pressure);
+			//Pressure.SendUpdatesToGpu();
+
+			// pressure
+			{
+				var center = new Vector2Int(5, 5);// new Vector2Int(resolution.x / 2, resolution.y / 2);
+				var p = resolution.x * resolution.x / 2;
+
+				PressureRead.AddDelta(center, p);
+				PressureRead.SendUpdatesToGpu();
+
+				Pressure.AddDelta(center, p);
+				Pressure.SendUpdatesToGpu();
+			}
 		}
 
 		void SetupShaders(Vector3Int resolution)
 		{
-			shaderSizeX = resolution.x;
-
-			pressure = new DataBuffer<double>(nameof(pressure), resolution);
-			pressureRead = new DataBuffer<double>(nameof(pressureRead), resolution);
-
-			dx = new DataBuffer<double>(nameof(dx), resolution);
-			dxRead = new DataBuffer<double>(nameof(dxRead), resolution);
-
-			dy = new DataBuffer<double>(nameof(dy), resolution);
-			dyRead = new DataBuffer<double>(nameof(dyRead), resolution);
-
-			blocked = new DataBuffer<int>(nameof(blocked), resolution);
-			debug = new DataBuffer<int>(nameof(debug), new Vector3Int(10, 1, 1));
-
-			//for (int x = 0; x < resolution.x; x++)
-			//{
-			//	blocked.AddDelta(new Vector2Int(x, 0), 1);
-			//	blocked.AddDelta(new Vector2Int(x, resolution.y - 1), 1);
-			//}
-			//for (int y = 0; y < resolution.y; y++)
-			//{
-			//	blocked.AddDelta(new Vector2Int(0, y), 1);
-			//	blocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
-			//}
-
-
-			//ApplyDelta(new Vector2Int(10, 16), new Vector2Int(20, 16), 1, blocked);
-			blocked.SendUpdatesToGpu();
-
-			ApplyDelta(new Vector2Int(0 + 0, 0 + 0), new Vector2Int(resolution.x - 1, resolution.y - 1), 0.5f, dx);
-			dx.SendUpdatesToGpu();
-			ApplyDelta(new Vector2Int(0 + 0, 0 + 0), new Vector2Int(resolution.x - 1, resolution.y - 1), 0.5f, dy);
-			dy.SendUpdatesToGpu();
-
-
-			var center = new Vector2Int(5, 5);// new Vector2Int(resolution.x / 2, resolution.y / 2);
-
-			var p = resolution.x * resolution.x / 2;
-
-			pressureRead.AddDelta(center, p);
-			pressureRead.SendUpdatesToGpu();
-
-			pressure.AddDelta(center, p);
-			pressure.SendUpdatesToGpu();
-
 			// shader
 			shader = Resources.Load<ComputeShader>("gas");
 
 			// globals
 			{
-				int N = shaderSizeX - 2;
-				shader.SetInt(nameof(shaderSizeX), shaderSizeX);
-				shader.SetInt(nameof(N), N);
-				shader.SetFloat(nameof(viscosityGlobal), viscosityGlobal);
-				shader.SetFloat(nameof(dtGlobal), dtGlobal);
+				shader.SetInt(nameof(ResolutionX), ResolutionX);
+				shader.SetFloat(nameof(ViscosityGlobal), ViscosityGlobal);
+				shader.SetFloat(nameof(DtGlobal), DtGlobal);
+				shader.SetInt(nameof(NumSides), NumSides);
 			}
+			// render
+			{
+				render = shader.FindKernel(nameof(render));
 
-			// render_pressure
-			{
-				render_pressure = shader.FindKernel(nameof(render_pressure));
-
-				sendAll(render_pressure);
-				shader.SetTexture(render_pressure, nameof(RenderTexture), RenderTexture);
-				shader.SetTexture(render_pressure, nameof(VelocityMap), VelocityMap);
+				sendAll(render);
+				shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
+				shader.SetTexture(render, nameof(VelocityMap), VelocityMap);
 			}
-
-
-			// diffuse_pressure
+			// apply_diffusion_forces
 			{
-				diffuse_pressure = shader.FindKernel(nameof(diffuse_pressure));
-				sendAll(diffuse_pressure);
+				apply_diffusion_forces = shader.FindKernel(nameof(apply_diffusion_forces));
+				sendAll(apply_diffusion_forces);
 			}
-			// diffuse_dx
+			// diffuse_forces
 			{
-				diffuse_dx = shader.FindKernel(nameof(diffuse_dx));
-				sendAll(diffuse_dx);
+				diffuse_forces = shader.FindKernel(nameof(diffuse_forces));
+				sendAll(diffuse_forces);
 			}
-			// diffuse_dy
-			{
-				diffuse_dy = shader.FindKernel(nameof(diffuse_dy));
-				sendAll(diffuse_dy);
-			}
-
-
-			// advect_pressure
-			{
-				advect_pressure = shader.FindKernel(nameof(advect_pressure));
-				sendAll(advect_pressure);
-			}
-			// advect_dx
-			{
-				advect_dx = shader.FindKernel(nameof(advect_dx));
-				sendAll(advect_dx);
-			}
-			// advect_dy
-			{
-				advect_dy = shader.FindKernel(nameof(advect_dy));
-				sendAll(advect_dy);
-			}
-
-
-			// project_start
-			{
-				project_start = shader.FindKernel(nameof(project_start));
-				sendAll(project_start);
-			}
-			// project_loop
-			{
-				project_loop = shader.FindKernel(nameof(project_loop));
-				sendAll(project_loop);
-			}
-			// project_end
-			{
-				project_end = shader.FindKernel(nameof(project_end));
-				sendAll(project_end);
-			}
-
-
-			// swap_pressure
-			{
-				swap_pressure = shader.FindKernel(nameof(swap_pressure));
-				sendAll(swap_pressure);
-			}
-			// swap_dx
-			{
-				swap_dx = shader.FindKernel(nameof(swap_dx));
-				sendAll(swap_dx);
-			}
-			// swap_dy
-			{
-				swap_dy = shader.FindKernel(nameof(swap_dy));
-				sendAll(swap_dy);
-			}
-
-			// set_bnd_project_dxdy
-			{
-				set_bnd_project_dxdy = shader.FindKernel(nameof(set_bnd_project_dxdy));
-				sendAll(set_bnd_project_dxdy);
-			}
-			// set_bnd_p
-			{
-				set_bnd_p = shader.FindKernel(nameof(set_bnd_p));
-				sendAll(set_bnd_p);
-			}
-			// set_bnd_project_dxdyRead
-			{
-				set_bnd_project_dxdyRead = shader.FindKernel(nameof(set_bnd_project_dxdyRead));
-				sendAll(set_bnd_project_dxdyRead);
-			}
-			// set_bnd_advect_pressure
-			{
-				set_bnd_advect_pressure = shader.FindKernel(nameof(set_bnd_advect_pressure));
-				sendAll(set_bnd_advect_pressure);
-			}
-			// set_bnd_advect_dx
-			{
-				set_bnd_advect_dx = shader.FindKernel(nameof(set_bnd_advect_dx));
-				sendAll(set_bnd_advect_dx);
-			}
-			// set_bnd_advect_dy
-			{
-				set_bnd_advect_dy = shader.FindKernel(nameof(set_bnd_advect_dy));
-				sendAll(set_bnd_advect_dy);
-			}
-
 			// copy_all
 			{
 				copy_all = shader.FindKernel(nameof(copy_all));
 				sendAll(copy_all);
 			}
-		}
+			//setup
+			{
+				setup = shader.FindKernel(nameof(setup));
+				sendAll(setup);
+			}
 
-		void copy()
-		{
-			Run(copy_all);
+			Run(setup);
 		}
 
 		public void Tick()
 		{
-			vel_step();
-			dense_step();
-			//copy();
-			display();
+			//Run(apply_diffusion_forces);
+			//Run(diffuse_forces);
+			Run(render);
 
-			debug.SendUpdatesToGpu();
-			Debug.Log(debug.cpuData[0]);
-		}
+			DebugData.SendUpdatesToGpu();
 
-		enum FieldType
-		{
-			DeltaX = 0,
-			DeltaY,
-			Pressure,
+			Debug.Log(DebugData.cpuData[0]);
 		}
 
 		void Run(int handle)
 		{
 			shader.Dispatch(handle, threadGroups, threadGroups, 1);
-		}
-
-		void swap(FieldType type)
-		{
-			if (FieldType.Pressure == type)
-				Run(swap_pressure);
-			if (FieldType.DeltaX == type)
-				Run(swap_dx);
-			if (FieldType.DeltaY == type)
-				Run(swap_dy);
-		}
-
-		void diffuse(FieldType type)
-		{
-			for (int k = 0; k < iterations; ++k)
-			{
-				if (FieldType.Pressure == type)
-				{
-					Run(diffuse_pressure);
-					Run(set_bnd_advect_pressure);
-				}
-				if (FieldType.DeltaX == type)
-				{
-					Run(diffuse_dx);
-					Run(set_bnd_advect_dx);
-				}
-				if (FieldType.DeltaY == type)
-				{
-					Run(diffuse_dy);
-					Run(set_bnd_advect_dy);
-				}
-			}
-		}
-
-		void advect(FieldType type)
-		{
-			if (FieldType.Pressure == type)
-			{
-				Run(advect_pressure);
-				Run(set_bnd_advect_pressure);
-			}
-			if (FieldType.DeltaX == type)
-			{
-				Run(advect_dx);
-				Run(set_bnd_advect_dx);
-			}
-			if (FieldType.DeltaY == type)
-			{
-				Run(advect_dy);
-				Run(set_bnd_advect_dy);
-			}
-		}
-
-		void project()
-		{
-			Run(project_start);
-			Run(set_bnd_project_dxdyRead);
-
-			for (int k = 0; k < iterations; ++k)
-			{
-				Run(project_loop);
-				Run(set_bnd_p);
-			}
-
-			Run(project_end);
-			Run(set_bnd_project_dxdy);
-		}
-
-		void vel_step()
-		{
-			// add source
-			swap(FieldType.DeltaX); diffuse(FieldType.DeltaX);
-			swap(FieldType.DeltaY); diffuse(FieldType.DeltaY);
-			project();
-
-			swap(FieldType.DeltaX); swap(FieldType.DeltaY);
-
-			advect(FieldType.DeltaX); advect(FieldType.DeltaY);
-			project();
-		}
-
-		void dense_step()
-		{
-			swap(FieldType.Pressure);
-			diffuse(FieldType.Pressure);
-
-			swap(FieldType.Pressure);
-			advect(FieldType.Pressure);
-		}
-
-		void display()
-		{
-			Run(render_pressure);
 		}
 	}
 }

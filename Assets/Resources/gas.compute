@@ -1,218 +1,56 @@
 ﻿
-typedef RWStructuredBuffer<double> Array;
+struct Delta
+{
+	double deltas[4];
+};
+
+typedef RWStructuredBuffer<Delta> ArrayDelta;
+typedef RWStructuredBuffer<double> ArrayDouble;
 typedef RWStructuredBuffer<int> ArrayInt;
 
-// Globals //
-Array pressureRead;
-Array pressure;
+// Globals ///
+ArrayDelta DeltasRead;
+ArrayDelta Deltas;
 
-Array dxRead;
-Array dx;
+ArrayDouble PressureRead;
+ArrayDouble Pressure;
 
-Array dyRead;
-Array dy;
-
-ArrayInt blocked;
-ArrayInt debug;
+ArrayInt IsBlocked;
+ArrayInt DebugData;
 
 RWTexture2D<float4> RenderTexture;
 RWTexture2D<float4> VelocityMap;
 
 /////////////
-int N;
-float viscosityGlobal;
-float dtGlobal;
+int NumSides = 4;
+int ResolutionX;
+float ViscosityGlobal;
+float DtGlobal;
+static int2 Offsets[4] =
+{
+	+int2(1, 2047483647),
+	-int2(0, 1),
+	-int2(1, 0),
+	+int2(0, 1)
+};
 /////////////
 
-uint at(double2 pos)
+int at(int2 pos)
 {
-	return pos.x + pos.y * (N + 2);
+	return pos.x + pos.y * ResolutionX;
 }
 
-uint at(double x, double y)
+float4 colorGradient(double value, double min, double  middle, double max)
 {
-	return x + y * (N + 2);
-}
-
-void swap_core(double2 pix, Array a, Array b)
-{
-	double temp = a[at(pix)];
-	a[at(pix)] = b[at(pix)];
-	b[at(pix)] = temp;
-}
-
-double clampy(double val, int dim)
-{
-	if(val < 0.5)
-		val = 0.5f;
-	if(val > dim + 0.5)
-		val = dim + 0.5f;
-	return val;
-}
-
-void set_bnd(double2 pos, int b, Array x) // 
-{
-	int max = N + 1;
-
-	//double2 offset = double2(0, 0);
-
-	if(pos.x == 0)
-	{
-		//offset.x = 1;
-		x[at(pos)] = b == 1 ? -x[at(1, pos.y)] : x[at(1, pos.y)];
-	}
-	if(pos.x == max)
-	{
-		//offset.x = -1;
-		x[at(pos)] = b == 1 ? -x[at(N, pos.y)] : x[at(N, pos.y)];
-	}
-	if(pos.y == 0)
-	{
-		//offset.y = 1;
-		x[at(pos)] = b == 2 ? -x[at(pos.x, 1)] : x[at(pos.x, 1)];
-	}
-	if(pos.y == max)
-	{
-		//offset.y = -1;
-		x[at(pos)] = b == 2 ? -x[at(pos.x, N)] : x[at(pos.x, N)];
-	}
-
-	//x[at(pos)] = x[at(pos + offset)];//
-
-	if((pos.x == 0 || pos.x == max) && (pos.y == 0 || pos.y == max))
-	{
-		x[at(0, 0)] = 0.5*(x[at(1, 0)] + x[at(0, 1)]);
-		x[at(0, N + 1)] = 0.5*(x[at(1, N + 1)] + x[at(0, N)]);
-		x[at(N + 1, 0)] = 0.5*(x[at(N, 0)] + x[at(N + 1, 1)]);
-		x[at(N + 1, N + 1)] = 0.5*(x[at(N, N + 1)] + x[at(N + 1, N)]);
-	}
-	//x[at(pos)] = 1;
-}
-
-void advect_core(double2 pos, int N, int b, Array d, Array d0, Array u, Array v, double dt)
-{
-	//int x0, y0, x1, y1;
-	//double xStart, yStart;
-	//double s0, t0, s1, t1; // interpolations
-
-	//xStart = pos.x - dt * velX[at(pos)];
-	//yStart = pos.y - dt * velY[at(pos)];
-
-	//xStart = clampy(xStart, dim);
-	//x0 = (int)xStart;
-	//x1 = x0 + 1;
-
-	//yStart = clampy(yStart, dim);
-	//y0 = (int)yStart;
-	//y1 = y0 + 1;
-
-	//s1 = xStart - x0;
-	//s0 = 1 - s1;
-	//t1 = yStart - y0;
-	//t0 = 1 - t1;
-
-	//value[at(pos)] = (s0 * (t0 * valueRead[at(x0, y0)] + t1 * valueRead[at(x0, y1)]) + s1 * (t0 * valueRead[at(x1, y0)] + t1 * valueRead[at(x1, y1)]));
-	int i = pos.x;
-	int j = pos.y;
-	int i0, j0, i1, j1;
-	double x, y, s0, t0, s1, t1, dt0;
-	dt0 = dt * N;
-
-	x = i - dt0 * u[at(i, j)]; y = j - dt0 * v[at(i, j)];
-	if(x < 0.5) x = 0.5; if(x > N + 0.5) x = N + 0.5; i0 = (int)x; i1 = i0 + 1;
-	if(y < 0.5) y = 0.5; if(y > N + 0.5) y = N + 0.5; j0 = (int)y; j1 = j0 + 1;
-	s1 = x - i0; s0 = 1 - s1; t1 = y - j0; t0 = 1 - t1;
-	d[at(i, j)] = s0 * (t0*d0[at(i0, j0)] + t1 * d0[at(i0, j1)]) +
-		s1 * (t0*d0[at(i1, j0)] + t1 * d0[at(i1, j1)]);
-
-	//set_bnd(pos, b, d);
-}
-
-void project_start_core(double2 pos, double dims, Array u, Array v, Array p, Array div)
-{
-	double h = double(1) / dims;
-
-	div[at(pos)] = -0.5f * h * (u[at(pos.x + 1, pos.y)] - u[at(pos.x - 1, pos.y)] +
-		v[at(pos.x, pos.y + 1)] - v[at(pos.x, pos.y - 1)]);
-	p[at(pos)] = 0;
-
-	//set_bnd(pos, 0, div); set_bnd(pos, 0, p);
-}
-
-void project_loop_core(double2 pos, double dims, Array u, Array v, Array p, Array div)
-{
-	double h = double(1) / dims;
-
-	p[at(pos)] = (div[at(pos)] + p[at(pos.x - 1, pos.y)] + p[at(pos.x + 1, pos.y)] +
-		p[at(pos.x, pos.y - 1)] + p[at(pos.x, pos.y + 1)]) / 4;
-
-	//set_bnd(pos, 0, p);
-}
-
-void project_end_core(double2 pos, double dims, Array u, Array v, Array p, Array div)
-{
-	double h = double(1) / dims;
-
-	u[at(pos)] -= 0.5f * (p[at(pos.x + 1, pos.y)] - p[at(pos.x - 1, pos.y)]) / h;
-	v[at(pos)] -= 0.5f * (p[at(pos.x, pos.y + 1)] - p[at(pos.x, pos.y - 1)]) / h;
-
-	//set_bnd(pos, 1, u); set_bnd(pos, 2, v);
-}
-
-double2 getDiffuse(double2 pos, double2 offset, Array newPressure)
-{
-	int newPos = at(pos + offset);
-	double p = newPressure[newPos];
-	//int notBlocked = (blocked[newPos] * -1) + 1;
-
-	return double2(p, 0);
-}
-
-bool shouldSkip(double2 pos)
-{
-	int max = N + 1;
-	if(pos.x == 0)
-		return true;
-	if(pos.x == max)
-		return true;
-	if(pos.y == 0)
-		return true;
-	if(pos.y == max)
-		return true;
-	return false;
-}
-
-void diffuse_loop(double2 pos, int boundary, Array newPressure, Array oldPressure, double diff, double dt)
-{
-	double2 np = double2(0, 0);
-
-	double a = dt * diff * N * N;
-
-	np += getDiffuse(pos, +double2(1, 0), newPressure);
-	np += getDiffuse(pos, +double2(0, 1), newPressure);
-	np += getDiffuse(pos, -double2(1, 0), newPressure);
-	np += getDiffuse(pos, -double2(0, 1), newPressure);
-
-	np.x *= a;
-	np.x += oldPressure[at(pos)];
-	np.x /= (1 + 4 * a);
-
-	newPressure[at(pos)] = np.x;
-
-	//set_bnd(pos, boundary, newPressure);
-	debug[0] = 0;
-}
-
-double4 colorGradient(double value, double min, double  middle, double max)
-{
-	double4 color = double4(0, 0, 0, 1);
+	float4 color = float4(0, 0, 0, 1);
 
 	if(value == 0)
 	{
-		return double4(1, 1, 1, 1);
+		return float4(1, 1, 1, 1);
 	}
 
-	// TODO extend this to purple
+	// TODO extend this to purple and toward white 
+	// (white is ok since it will be surrounded by purple)
 	if(value > max)
 	{
 		color.r = 1;
@@ -220,14 +58,14 @@ double4 colorGradient(double value, double min, double  middle, double max)
 	else if(value > middle)
 	{
 		// bound the value to [min, max] as [0, 1]
-		double between = (value - middle) / (max - middle);
+		float between = float((value - middle) / (max - middle));
 		color.r = between;
 		color.g = 1 - between;
 	}
 	else
 	{
 		// bound the value to [min, max] as [0, 1]
-		double between = (value - min) / (middle - min);
+		float between = float((value - min) / (middle - min));
 		color.g = between;
 		color.b = 1 - between;
 	}
@@ -238,16 +76,16 @@ double4 colorGradient(double value, double min, double  middle, double max)
 //////////////
 /// render ///
 //////////////
-#pragma kernel render_pressure
+#pragma kernel render
 [numthreads(16, 16, 1)]
-void render_pressure(uint3 pix : SV_DispatchThreadID)
+void render(uint3 pix : SV_DispatchThreadID)
 {
-	double2 pos = pix.xy;
+	int2 pos = pix.xy;
 
-	double4 c = double4(1, 0, 1, 1);
+	float4 c = float4(1, 0, 1, 1);
 
-	double p = pressure[at(pos)];
-	bool isBlocked = blocked[at(pos)];
+	double p = Pressure[at(pos)];
+	bool isBlocked = IsBlocked[at(pos)];
 
 	if(isBlocked)
 	{
@@ -257,191 +95,54 @@ void render_pressure(uint3 pix : SV_DispatchThreadID)
 	{
 		c = colorGradient(p, 0, 0.5, 1);
 	}
-	// dont count the pressure in the boundaries!//
-	if(!shouldSkip(pos))
-		InterlockedAdd(debug[0], p * 1000);
-	else
-		c = float4(0, 0, 0, 1);
 
+	// dont count the pressure in the boundaries
+	if(!isBlocked)
+		InterlockedAdd(DebugData[0], int(p * 1000));
 
 	RenderTexture[pos] = c;
-	VelocityMap[pos] = colorGradient(dx[at(pos)], -1.0, 0.0, 1.0);
-
-}
-
-///////////////
-/// diffuse ///
-////////////////
-#pragma kernel diffuse_pressure
-[numthreads(16, 16, 1)]
-void diffuse_pressure(uint3 pix : SV_DispatchThreadID)
-{
-	diffuse_loop(pix.xy, 0, pressure, pressureRead, viscosityGlobal, dtGlobal);
-}
-
-#pragma kernel diffuse_dx
-[numthreads(16, 16, 1)]
-void diffuse_dx(uint3 pix : SV_DispatchThreadID)
-{
-	diffuse_loop(pix.xy, 1, dx, dxRead, viscosityGlobal, dtGlobal);
-}
-
-#pragma kernel diffuse_dy
-[numthreads(16, 16, 1)]
-void diffuse_dy(uint3 pix : SV_DispatchThreadID)
-{
-	diffuse_loop(pix.xy, 2, dy, dyRead, viscosityGlobal, dtGlobal);
-}
-
-//////////////
-/// advect ///
-//////////////
-#pragma kernel advect_pressure
-[numthreads(16, 16, 1)]
-void advect_pressure(uint3 pix : SV_DispatchThreadID)
-{
-	//advect ( N, 0, x, x0, u, v, dt );
-	advect_core(pix.xy, N, 0, pressure, pressureRead, dx, dy, dtGlobal);
-}
-
-#pragma kernel advect_dx
-[numthreads(16, 16, 1)]
-void advect_dx(uint3 pix : SV_DispatchThreadID)
-{
-	//advect ( N, 1, u, u0, u0, v0, dt ); 
-	advect_core(pix.xy, N, 1, dx, dxRead, dxRead, dyRead, dtGlobal);
-}
-
-#pragma kernel advect_dy
-[numthreads(16, 16, 1)]
-void advect_dy(uint3 pix : SV_DispatchThreadID)
-{
-	//advect ( N, 2, v, v0, u0, v0, dt );//
-	advect_core(pix.xy, N, 2, dy, dyRead, dxRead, dyRead, dtGlobal);
-}
-
-///////////////
-/// project ///
-///////////////
-#pragma kernel project_start
-[numthreads(16, 16, 1)]
-void project_start(uint3 pix : SV_DispatchThreadID)
-{
-	project_start_core(pix.xy, N, dx, dy, dxRead, dyRead);
-}
-
-#pragma kernel project_loop
-[numthreads(16, 16, 1)]
-void project_loop(uint3 pix : SV_DispatchThreadID)
-{
-	project_loop_core(pix.xy, N, dx, dy, dxRead, dyRead);
-}
-
-#pragma kernel project_end
-[numthreads(16, 16, 1)]
-void project_end(uint3 pix : SV_DispatchThreadID)
-{
-	project_end_core(pix.xy, N, dx, dy, dxRead, dyRead);
-}
-
-///////////////
-/// set_bnd ///
-///////////////
-#pragma kernel set_bnd_project_dxdyRead
-[numthreads(16, 16, 1)]
-void set_bnd_project_dxdyRead(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 0, dyRead);
-	set_bnd(pix.xy, 0, dxRead);
-}
-
-#pragma kernel set_bnd_p
-[numthreads(16, 16, 1)]
-void set_bnd_p(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 0, dxRead);
-}
-
-#pragma kernel set_bnd_project_dxdy
-[numthreads(16, 16, 1)]
-void set_bnd_project_dxdy(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 1, dx);
-	set_bnd(pix.xy, 2, dy);
-}
-
-
-
-#pragma kernel set_bnd_advect_pressure
-[numthreads(16, 16, 1)]
-void set_bnd_advect_pressure(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 0, pressure);
-}
-#pragma kernel set_bnd_advect_dx
-[numthreads(16, 16, 1)]
-void set_bnd_advect_dx(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 1, dx);
-}
-#pragma kernel set_bnd_advect_dy
-[numthreads(16, 16, 1)]
-void set_bnd_advect_dy(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 2, dy);
-}
-
-
-#pragma kernel set_bnd_diffuse_pressure
-[numthreads(16, 16, 1)]
-void set_bnd_diffuse_pressure(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 0, pressure);
-}
-#pragma kernel set_bnd_diffuse_dx
-[numthreads(16, 16, 1)]
-void set_bnd_diffuse_dx(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 1, dx);
-}
-#pragma kernel set_bnd_diffuse_dy
-[numthreads(16, 16, 1)]
-void set_bnd_diffuse_dy(uint3 pix : SV_DispatchThreadID)
-{
-	set_bnd(pix.xy, 2, dy);
+	VelocityMap[pos] = colorGradient(Deltas[at(pos)].deltas[0], -1.0, 0.0, 1.0);
 }
 
 ////////////
 /// swap ///
 ////////////
-#pragma kernel swap_pressure
-[numthreads(16, 16, 1)]
-void swap_pressure(uint3 pix : SV_DispatchThreadID)
-{
-	swap_core(pix.xy, pressure, pressureRead);
-}
-
-#pragma kernel swap_dx
-[numthreads(16, 16, 1)]
-void swap_dx(uint3 pix : SV_DispatchThreadID)
-{
-	swap_core(pix.xy, dx, dxRead);
-}
-
-#pragma kernel swap_dy
-[numthreads(16, 16, 1)]
-void swap_dy(uint3 pix : SV_DispatchThreadID)
-{
-	swap_core(pix.xy, dy, dyRead);
-}
-
 #pragma kernel copy_all
 [numthreads(16, 16, 1)]
 void copy_all(uint3 pix : SV_DispatchThreadID)
 {
-	double2 pos = pix.xy;
-	pressureRead[at(pos)] = pressure[at(pos)];
-	dx[at(pos)] = dx[at(pos)];
-	dyRead[at(pos)] = dy[at(pos)];
+	//swap_core(pix.xy, pressure, pressureRead);
 }
 
+void calc_forces(int2 pos, ArrayDouble p, ArrayDelta d)
+{
+	for(int side = 0; side < NumSides; ++side)
+	{
+		double pressure = p[at(pos)];
+		int2 offset = Offsets[side];
+		double otherPressure = p[at(pos + offset)];
+		double difference = pressure - otherPressure;
+		d[at(pos)].deltas[side] += max(0, difference / 10.0);
+	}
+	DebugData[0] = 0;
+}
+#pragma kernel apply_diffusion_forces
+[numthreads(16, 16, 1)]
+void apply_diffusion_forces(uint3 pix : SV_DispatchThreadID)
+{
+	calc_forces(pix.xy, Pressure, Deltas);
+}
+#pragma kernel diffuse_forces
+[numthreads(16, 16, 1)]
+void diffuse_forces(uint3 pix : SV_DispatchThreadID)
+{
+	for(int side = 0; side < NumSides; ++side)
+		Deltas[at(pix.xy)].deltas[side] = 0;
+}
+
+#pragma kernel setup
+[numthreads(1, 1, 1)]
+void setup(uint3 pix : SV_DispatchThreadID)
+{
+
+}
