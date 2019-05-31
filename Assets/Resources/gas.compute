@@ -22,7 +22,7 @@ RWTexture2D<float4> RenderTexture;
 RWTexture2D<float4> VelocityMap;
 
 //////////////
-int NumSides;
+uint NumSides;
 float Rate;
 int ResolutionX;
 float ViscosityGlobal;
@@ -95,20 +95,26 @@ void render(uint3 pix : SV_DispatchThreadID)
 	}
 	else
 	{
-		c = colorGradient(p, 0, 10, 20);
+		c = colorGradient(p, 0, 0.5, 1);
 	}
 
 	// dont count the pressure in the boundaries
-	if(!isBlocked)
-		InterlockedAdd(DebugData[0], int(p * 1000));
+	//if(!isBlocked)
+		//InterlockedAdd(DebugData[0], int(p * 1000));
 
 	RenderTexture[pos] = c;
 
 	double deltaSum = 0;
-	for(int side = 0; side < NumSides; ++side)
+	for(uint side = 0; side < NumSides; ++side)
 		deltaSum += Delta[at(pos)].deltas[side];
 
-	VelocityMap[pos] = colorGradient(deltaSum, 0, 5, 10);
+	int2 readPos = int2(pix.x, 1);
+	double otherP = Pressure[at(readPos)];
+
+	if(otherP > pix.y)
+		VelocityMap[pos] = float4(0, 0, 0, 1);// colorGradient(deltaSum, 0, 0.5, 1);
+	else
+		VelocityMap[pos] = float4(1, 1, 1, 1);
 }
 
 ////////////
@@ -124,11 +130,11 @@ void copy_all(uint3 pix : SV_DispatchThreadID)
 
 void calc_forces(int2 pos, ArrayDouble p, ArrayDelta d)
 {
-	for(int side = 0; side < NumSides; ++side)
+	for(uint side = 0; side < NumSides; ++side)
 	{
+		int2 neighbor = Offsets[side] + pos;
 		double pressure = p[at(pos)];
-		int2 offset = Offsets[side];
-		double otherPressure = p[at(pos + offset)];
+		double otherPressure = p[at(neighbor)];
 		double difference = pressure - otherPressure;
 		d[at(pos)].deltas[side] += max(0, difference * Rate);
 	}
@@ -141,9 +147,19 @@ void calc_diffusion_forces(uint3 pix : SV_DispatchThreadID)
 	calc_forces(pix.xy, Pressure, Delta);
 }
 
+uint switch_side(uint side)
+{
+	return (side + (NumSides / 2)) % NumSides;
+}
+
 void move_gas(int2 pos, ArrayDouble p, ArrayDouble p0, ArrayDelta d)
 {
-
+	for(uint side = 0; side < NumSides; ++side)
+	{
+		int otherSide = switch_side(side);
+		int2 neighbor = Offsets[side] + pos;
+		double neighborContrib = d[at(neighbor)].deltas[otherSide];
+	}
 }
 
 #pragma kernel apply_diffusion_forces
@@ -158,6 +174,6 @@ void apply_diffusion_forces(uint3 pix : SV_DispatchThreadID)
 [numthreads(16, 16, 1)]
 void diffuse_forces(uint3 pix : SV_DispatchThreadID)
 {
-	for(int side = 0; side < NumSides; ++side)
+	for(uint side = 0; side < NumSides; ++side)
 		Delta[at(pix.xy)].deltas[side] = 0;
 }

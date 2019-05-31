@@ -73,9 +73,9 @@ namespace Assets.Scripts
 		public void ApplyDelta<T>(Vector2Int start, Vector2Int size, T delta, DataBuffer<T> tiles)
 		{
 			Vector2Int end = start + size;
-			for (int x = start.x; x <= end.x; x++)
+			for (int x = start.x; x < end.x; x++)
 			{
-				for (int y = start.y; y <= end.y; y++)
+				for (int y = start.y; y < end.y; y++)
 				{
 					tiles.AddDelta(new Vector2Int(x, y), delta);
 				}
@@ -109,23 +109,26 @@ namespace Assets.Scripts
 			IsBlocked = new DataBuffer<int>(nameof(IsBlocked), resolution);
 			DebugData = new DataBuffer<int>(nameof(DebugData), new Vector3Int(10, 1, 1));
 
-			//for (int x = 0; x < resolution.x; x++)
-			//{
-			//	IsBlocked.AddDelta(new Vector2Int(x, 0), 1);
-			//	IsBlocked.AddDelta(new Vector2Int(x, resolution.y - 1), 1);
-			//}
-			//for (int y = 0; y < resolution.y; y++)
-			//{
-			//	IsBlocked.AddDelta(new Vector2Int(0, y), 1);
-			//	IsBlocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
-			//}
 
 			// blocked
-			ApplyDelta(new Vector2Int(2, 2), new Vector2Int(5, 1), 1, IsBlocked);
-			IsBlocked.SendUpdatesToGpu();
+			{
+				for (int x = 0; x < resolution.x; x++)
+				{
+					IsBlocked.AddDelta(new Vector2Int(x, 0), 1);
+					IsBlocked.AddDelta(new Vector2Int(x, resolution.y - 1), 1);
+				}
+				for (int y = 0; y < resolution.y; y++)
+				{
+					IsBlocked.AddDelta(new Vector2Int(0, y), 1);
+					IsBlocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
+				}
 
-			Delta d = new Delta { r = 1, d = 1, l = 1, u = 1, };
-			ApplyDelta(new Vector2Int(2, 2), new Vector2Int(5, 1), d, Delta);
+				ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x, 1), 1, IsBlocked);
+				IsBlocked.SendUpdatesToGpu();
+			}
+
+			//Delta d = new Delta { r = 1, d = 1, l = 1, u = 1, };
+			//ApplyDelta(new Vector2Int(4, 4), new Vector2Int(5, 1), d, Delta);
 			Delta.SendUpdatesToGpu();
 
 			//// pressure
@@ -134,13 +137,13 @@ namespace Assets.Scripts
 
 			// pressure
 			{
-				var center = new Vector2Int(5, 5);// new Vector2Int(resolution.x / 2, resolution.y / 2);
+				var center = new Vector2Int(3, 1);// new Vector2Int(resolution.x / 2, resolution.y / 2);
 				var p = resolution.x * resolution.x / 2;
 
-				PressureRead.AddDelta(center, p);
+				PressureRead.AddDelta(center, 10);
 				PressureRead.SendUpdatesToGpu();
 
-				Pressure.AddDelta(center, p);
+				Pressure.AddDelta(center, 10);
 				Pressure.SendUpdatesToGpu();
 			}
 		}
@@ -191,12 +194,13 @@ namespace Assets.Scripts
 		public void Tick()
 		{
 			Run(calc_diffusion_forces);
+			Run(apply_diffusion_forces);
 			Run(render);
 			Run(diffuse_forces);
 
 			DebugData.SendUpdatesToGpu();
 
-			Debug.Log(DebugData.cpuData[0]);
+			//Debug.Log(DebugData.cpuData[0]);
 		}
 
 		void Run(int handle)
