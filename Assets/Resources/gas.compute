@@ -1,19 +1,14 @@
 ﻿
-struct DeltaType
-{
-	double deltas[4];
-};
 
-typedef RWStructuredBuffer<DeltaType> ArrayDelta;
+typedef RWStructuredBuffer<double4> ArrayDelta;
 typedef RWStructuredBuffer<double> ArrayDouble;
 typedef RWStructuredBuffer<int> ArrayInt;
 
 // Globals ///
-ArrayDelta DeltaRead;
+ArrayDelta Delta2;
 ArrayDelta Delta;
 
-ArrayDouble PressureRead;
-ArrayDouble Pressure;
+ArrayDouble Mass;
 
 ArrayInt IsBlocked;
 ArrayInt DebugData;
@@ -27,6 +22,7 @@ float Rate;
 int ResolutionX;
 float ViscosityGlobal;
 float DtGlobal;
+float VelocityConservation;
 
 static int2 Offsets[4] =
 {
@@ -86,7 +82,7 @@ void render(uint3 pix : SV_DispatchThreadID)
 
 	float4 c = float4(1, 0, 1, 1);
 
-	double p = Pressure[at(pos)];
+	double p = Mass[at(pos)];
 	bool isBlocked = IsBlocked[at(pos)];
 
 	if(isBlocked)
@@ -98,7 +94,7 @@ void render(uint3 pix : SV_DispatchThreadID)
 		c = colorGradient(p, 0, 0.5, 1);
 	}
 
-	// dont count the pressure in the boundaries
+	// dont count the mass in the boundaries
 	//if(!isBlocked)
 		//InterlockedAdd(DebugData[0], int(p * 1000));
 
@@ -106,45 +102,38 @@ void render(uint3 pix : SV_DispatchThreadID)
 
 	double deltaSum = 0;
 	for(uint side = 0; side < NumSides; ++side)
-		deltaSum += Delta[at(pos)].deltas[side];
+		deltaSum += Delta[at(pos)][side];
 
 	int2 readPos = int2(pix.x, 1);
-	double otherP = Pressure[at(readPos)];
+	double otherP = Mass[at(readPos)];
 
-	if(otherP > pix.y)
+	if(otherP > pos.y)
 		VelocityMap[pos] = float4(0, 0, 0, 1);// colorGradient(deltaSum, 0, 0.5, 1);
 	else
 		VelocityMap[pos] = float4(1, 1, 1, 1);
 }
 
-////////////
-/// swap ///
-////////////
-#pragma kernel copy_all
-[numthreads(16, 16, 1)]
-void copy_all(uint3 pix : SV_DispatchThreadID)
+// Make the deltas sum to M
+void diffuse_deltas(int2 pos, ArrayDouble mass, ArrayDelta deltas)
 {
-	//swap_core(pix.xy, pressure, pressureRead);
-}
-
-
-void calc_forces(int2 pos, ArrayDouble p, ArrayDelta d)
-{
+	deltas[at(pos)] *= VelocityConservation;
+	double totalMass = mass[at(pos)];
+	double deltaSum = 0;
 	for(uint side = 0; side < NumSides; ++side)
-	{
-		int2 neighbor = Offsets[side] + pos;
-		double pressure = p[at(pos)];
-		double otherPressure = p[at(neighbor)];
-		double difference = pressure - otherPressure;
-		d[at(pos)].deltas[side] += max(0, difference * Rate);
-	}
-	//DebugData[0] = 0;
+		deltaSum += deltas[at(pos)][side];
+
+	double modifyPer = (totalMass - deltaSum) / 4.0;
+	for(uint side1 = 0; side1 < NumSides; ++side1)
+		deltas[at(pos)][side1] += modifyPer;
 }
-#pragma kernel calc_diffusion_forces
+#pragma kernel diffuse_deltas
 [numthreads(16, 16, 1)]
-void calc_diffusion_forces(uint3 pix : SV_DispatchThreadID)
+void diffuse_deltas(uint3 pix : SV_DispatchThreadID)
 {
-	calc_forces(pix.xy, Pressure, Delta);
+	if(!IsBlocked[at(pix.xy)])
+	{
+		diffuse_deltas(pix.xy, Mass, Delta);
+	}
 }
 
 uint switch_side(uint side)
@@ -152,28 +141,42 @@ uint switch_side(uint side)
 	return (side + (NumSides / 2)) % NumSides;
 }
 
-void move_gas(int2 pos, ArrayDouble p, ArrayDouble p0, ArrayDelta d)
+double getContribution(int2 pos, uint fromSide, ArrayDelta deltas)
 {
-	for(uint side = 0; side < NumSides; ++side)
+
+}
+
+void set_mass(int2 pos, ArrayDouble mass, ArrayDelta deltas, ArrayDelta newDeltas)
+{
+	double contributions = 0;
+	for(uint fromSide = 0; fromSide < NumSides; ++fromSide)
 	{
-		int otherSide = switch_side(side);
-		int2 neighbor = Offsets[side] + pos;
-		double neighborContrib = d[at(neighbor)].deltas[otherSide];
+		int2 neighbor = Offsets[fromSide] + pos;
+		if(IsBlocked[at(neighbor)])
+		{
+			contributions += deltas[at(pos)][fromSide]; // contribute exactly what we would give them
+		}
+		else
+		{
+			int otherSide = switch_side(fromSide); // reverse the side 
+			contributions += deltas[at(neighbor)][otherSide]; // get the neighbor contributions to us
+		}
+		newDeltas[at(pos)] = double4(0, 0, 0, 0);
 	}
+	mass[at(pos)] = contributions;
 }
 
-#pragma kernel apply_diffusion_forces
+#pragma kernel set_mass
 [numthreads(16, 16, 1)]
-void apply_diffusion_forces(uint3 pix : SV_DispatchThreadID)
+void set_mass(uint3 pix : SV_DispatchThreadID)
 {
-	move_gas(pix.xy, Pressure, PressureRead, Delta);
+	set_mass(pix.xy, Mass, Delta, Delta2);
 }
 
 
-#pragma kernel diffuse_forces
+#pragma kernel copy_all
 [numthreads(16, 16, 1)]
-void diffuse_forces(uint3 pix : SV_DispatchThreadID)
+void copy_all(uint3 pix : SV_DispatchThreadID)
 {
-	for(uint side = 0; side < NumSides; ++side)
-		Delta[at(pix.xy)].deltas[side] = 0;
+	Delta[at(pix.xy)] = Delta2[at(pix.xy)];
 }

@@ -18,11 +18,10 @@ namespace Assets.Scripts
 		public Vector3Int Resolution;
 
 		#region GPU
-		DataBuffer<Delta> DeltaRead;
+		DataBuffer<Delta> Delta2;
 		DataBuffer<Delta> Delta;
 
-		DataBuffer<double> PressureRead;
-		DataBuffer<double> Pressure;
+		DataBuffer<double> Mass;
 
 		DataBuffer<int> IsBlocked;
 		DataBuffer<int> DebugData;
@@ -35,6 +34,7 @@ namespace Assets.Scripts
 		int ResolutionX;
 		const float ViscosityGlobal = 0.01f;
 		const float DtGlobal = 0.01f;
+		const float VelocityConservation = 0.95f;
 		#endregion
 
 		#region Shader
@@ -44,8 +44,8 @@ namespace Assets.Scripts
 		#endregion
 
 		#region Kernels
-		int calc_diffusion_forces;
-		int apply_diffusion_forces;
+		int diffuse_deltas;
+		int set_mass;
 		int diffuse_forces;
 		int copy_all;
 		int render;
@@ -86,11 +86,10 @@ namespace Assets.Scripts
 
 		void sendAll(int handle)
 		{
-			DeltaRead.SendTo(handle, shader);
+			Delta2.SendTo(handle, shader);
 			Delta.SendTo(handle, shader);
 
-			PressureRead.SendTo(handle, shader);
-			Pressure.SendTo(handle, shader);
+			Mass.SendTo(handle, shader);
 
 			IsBlocked.SendTo(handle, shader);
 			DebugData.SendTo(handle, shader);
@@ -100,11 +99,10 @@ namespace Assets.Scripts
 		{
 			ResolutionX = resolution.x;
 
-			DeltaRead = new DataBuffer<Delta>(nameof(DeltaRead), resolution);
+			Delta2 = new DataBuffer<Delta>(nameof(Delta2), resolution);
 			Delta = new DataBuffer<Delta>(nameof(Delta), resolution);
 
-			PressureRead = new DataBuffer<double>(nameof(PressureRead), resolution);
-			Pressure = new DataBuffer<double>(nameof(Pressure), resolution);
+			Mass = new DataBuffer<double>(nameof(Mass), resolution);
 
 			IsBlocked = new DataBuffer<int>(nameof(IsBlocked), resolution);
 			DebugData = new DataBuffer<int>(nameof(DebugData), new Vector3Int(10, 1, 1));
@@ -132,19 +130,16 @@ namespace Assets.Scripts
 			Delta.SendUpdatesToGpu();
 
 			//// pressure
-			//ApplyDelta(new Vector2Int(5, 5), new Vector2Int(1, 1), 10f, Pressure);
-			//Pressure.SendUpdatesToGpu();
+			//ApplyDelta(new Vector2Int(5, 5), new Vector2Int(1, 1), 10f, Mass);
+			//Mass.SendUpdatesToGpu();
 
 			// pressure
 			{
 				var center = new Vector2Int(3, 1);// new Vector2Int(resolution.x / 2, resolution.y / 2);
 				var p = resolution.x * resolution.x / 2;
 
-				PressureRead.AddDelta(center, 10);
-				PressureRead.SendUpdatesToGpu();
-
-				Pressure.AddDelta(center, 10);
-				Pressure.SendUpdatesToGpu();
+				Mass.AddDelta(center, 20);
+				Mass.SendUpdatesToGpu();
 			}
 		}
 
@@ -160,6 +155,7 @@ namespace Assets.Scripts
 				shader.SetInt(nameof(ResolutionX), ResolutionX);
 				shader.SetFloat(nameof(ViscosityGlobal), ViscosityGlobal);
 				shader.SetFloat(nameof(DtGlobal), DtGlobal);
+				shader.SetFloat(nameof(VelocityConservation), VelocityConservation);
 			}
 			// render
 			{
@@ -169,20 +165,15 @@ namespace Assets.Scripts
 				shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
 				shader.SetTexture(render, nameof(VelocityMap), VelocityMap);
 			}
-			// calc_diffusion_forces
+			// diffuse_deltas
 			{
-				calc_diffusion_forces = shader.FindKernel(nameof(calc_diffusion_forces));
-				sendAll(calc_diffusion_forces);
+				diffuse_deltas = shader.FindKernel(nameof(diffuse_deltas));
+				sendAll(diffuse_deltas);
 			}
-			// apply_diffusion_forces
+			// set_mass
 			{
-				apply_diffusion_forces = shader.FindKernel(nameof(apply_diffusion_forces));
-				sendAll(apply_diffusion_forces);
-			}
-			// diffuse_forces
-			{
-				diffuse_forces = shader.FindKernel(nameof(diffuse_forces));
-				sendAll(diffuse_forces);
+				set_mass = shader.FindKernel(nameof(set_mass));
+				sendAll(set_mass);
 			}
 			// copy_all
 			{
@@ -193,10 +184,10 @@ namespace Assets.Scripts
 
 		public void Tick()
 		{
-			Run(calc_diffusion_forces);
-			Run(apply_diffusion_forces);
+			Run(diffuse_deltas);
+			Run(set_mass);
+			Run(copy_all);
 			Run(render);
-			Run(diffuse_forces);
 
 			DebugData.SendUpdatesToGpu();
 
