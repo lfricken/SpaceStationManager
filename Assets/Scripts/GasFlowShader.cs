@@ -34,7 +34,7 @@ namespace Assets.Scripts
 		int ResolutionX;
 		const float ViscosityGlobal = 0.01f;
 		const float DtGlobal = 0.01f;
-		const float VelocityConservation = 0.7f;
+		const float VelocityConservation = 0.99f;
 		#endregion
 
 		#region Shader

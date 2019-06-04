@@ -105,7 +105,7 @@ void render(uint3 pix : SV_DispatchThreadID)
 		deltaSum += Delta[at(pos)][side];
 
 	int2 readPos = int2(pix.x, 1);
-	double otherP = Mass[at(readPos)];
+	double otherP = Mass[at(readPos)] * 30;
 
 	if(otherP > pos.y)
 		VelocityMap[pos] = float4(0, 0, 0, 1);// colorGradient(deltaSum, 0, 0.5, 1);

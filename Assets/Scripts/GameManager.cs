@@ -33,10 +33,11 @@ public class GameManager : MonoBehaviour
 
 	IEnumerator Tick()
 	{
-		for (int i = 0; i < 1000; i++)
+		for (int i = 0; i < 10000; i++)
 		{
-			yield return new WaitForSeconds(0.033f);
-			gas.Tick();
+			yield return new WaitForSeconds(0.00f);
+			for (int n = 0; n < 10; n++)
+				gas.Tick();
 		}
 	}
 }
