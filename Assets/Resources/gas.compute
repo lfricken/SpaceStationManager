@@ -75,7 +75,7 @@ float4 colorGradient(double value, double min, double  middle, double max)
 /// render ///
 //////////////
 #pragma kernel render
-[numthreads(16, 16, 1)]
+[numthreads(8, 8, 1)]
 void render(uint3 pix : SV_DispatchThreadID)
 {
 	int2 pos = pix.xy;
@@ -127,7 +127,7 @@ void diffuse_deltas(int2 pos, ArrayDouble mass, ArrayDelta deltas)
 		deltas[at(pos)][side1] += modifyPer;
 }
 #pragma kernel diffuse_deltas
-[numthreads(16, 16, 1)]
+[numthreads(8, 8, 1)]
 void diffuse_deltas(uint3 pix : SV_DispatchThreadID)
 {
 	if(!IsBlocked[at(pix.xy)])
@@ -168,7 +168,7 @@ void set_mass(int2 pos, ArrayDouble mass, ArrayDelta deltas, ArrayDelta newDelta
 }
 
 #pragma kernel set_mass
-[numthreads(16, 16, 1)]
+[numthreads(8, 8, 1)]
 void set_mass(uint3 pix : SV_DispatchThreadID)
 {
 	set_mass(pix.xy, Mass, Delta, Delta2);
@@ -176,7 +176,7 @@ void set_mass(uint3 pix : SV_DispatchThreadID)
 
 
 #pragma kernel copy_all
-[numthreads(16, 16, 1)]
+[numthreads(8, 8, 1)]
 void copy_all(uint3 pix : SV_DispatchThreadID)
 {
 	Delta[at(pix.xy)] = Delta2[at(pix.xy)];

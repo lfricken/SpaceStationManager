@@ -34,11 +34,11 @@ namespace Assets.Scripts
 		int ResolutionX;
 		const float ViscosityGlobal = 0.01f;
 		const float DtGlobal = 0.01f;
-		const float VelocityConservation = 0.99f;
+		const float VelocityConservation = 0.80f;
 		#endregion
 
 		#region Shader
-		readonly int numXYThreads = 16; // If you update this, you need to update gas.compute!
+		readonly int numXYThreads = 8; // If you update this, you need to update gas.compute!
 		int threadGroups;
 		ComputeShader shader;
 		#endregion
@@ -120,11 +120,12 @@ namespace Assets.Scripts
 					IsBlocked.AddDelta(new Vector2Int(0, y), 1);
 					IsBlocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
 				}
+				ApplyDelta(new Vector2Int(5, 10), new Vector2Int(resolution.x - 80, 1), 1, IsBlocked);
 
 				//ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x, 1), 1, IsBlocked);
 				IsBlocked.SendUpdatesToGpu();
 			}
-
+			
 			//Delta d = new Delta { r = 1, d = 1, l = 1, u = 1, };
 			//ApplyDelta(new Vector2Int(4, 4), new Vector2Int(5, 1), d, Delta);
 			Delta.SendUpdatesToGpu();
