@@ -34,7 +34,7 @@ namespace Assets.Scripts
 		int ResolutionX;
 		const float ViscosityGlobal = 0.01f;
 		const float DtGlobal = 0.01f;
-		const float VelocityConservation = 0.95f;
+		const float VelocityConservation = 0.7f;
 		#endregion
 
 		#region Shader
@@ -121,7 +121,7 @@ namespace Assets.Scripts
 					IsBlocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
 				}
 
-				ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x, 1), 1, IsBlocked);
+				//ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x, 1), 1, IsBlocked);
 				IsBlocked.SendUpdatesToGpu();
 			}
 
@@ -138,7 +138,7 @@ namespace Assets.Scripts
 				var center = new Vector2Int(3, 1);// new Vector2Int(resolution.x / 2, resolution.y / 2);
 				var p = resolution.x * resolution.x / 2;
 
-				Mass.AddDelta(center, 20);
+				Mass.AddDelta(center, p);
 				Mass.SendUpdatesToGpu();
 			}
 		}

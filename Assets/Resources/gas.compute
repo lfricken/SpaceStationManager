@@ -141,29 +141,30 @@ uint switch_side(uint side)
 	return (side + (NumSides / 2)) % NumSides;
 }
 
-double getContribution(int2 pos, uint fromSide, ArrayDelta deltas)
-{
-
-}
-
 void set_mass(int2 pos, ArrayDouble mass, ArrayDelta deltas, ArrayDelta newDeltas)
 {
-	double contributions = 0;
+	double totalContributions = 0;
 	for(uint fromSide = 0; fromSide < NumSides; ++fromSide)
 	{
+		int otherSide = switch_side(fromSide); // reverse the side 
 		int2 neighbor = Offsets[fromSide] + pos;
+		double thisMassContrib = 0;
+		double thisDeltaContrib = 0;
 		if(IsBlocked[at(neighbor)])
 		{
-			contributions += deltas[at(pos)][fromSide]; // contribute exactly what we would give them
+			double bounceConservation = 1.0; // delta loss from bouncing off wall
+			thisMassContrib = deltas[at(pos)][fromSide]; // contribute exactly what we would give them
+			thisDeltaContrib = bounceConservation * thisMassContrib;
 		}
 		else
 		{
-			int otherSide = switch_side(fromSide); // reverse the side 
-			contributions += deltas[at(neighbor)][otherSide]; // get the neighbor contributions to us
+			thisMassContrib = deltas[at(neighbor)][otherSide]; // get the neighbor contributions to us.
+			thisDeltaContrib = thisMassContrib;
 		}
-		newDeltas[at(pos)] = double4(0, 0, 0, 0);
+		newDeltas[at(pos)][otherSide] = thisDeltaContrib; // the gas will flow to the opposite tile it came from
+		totalContributions += thisMassContrib;
 	}
-	mass[at(pos)] = contributions;
+	mass[at(pos)] = totalContributions;
 }
 
 #pragma kernel set_mass
