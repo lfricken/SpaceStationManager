@@ -34,6 +34,9 @@ namespace Assets.Scripts
 		int ResolutionX;
 		const float VelocityConservation = 0.99f;
 		const float MassCollisionDeflectFraction = 3.0f; // when 2 gasses collide, how much is redirected sideways
+		const float WaveSpread = 0.1f; // 
+		const float MaxPressureRender = 2.0f;
+		const float MaxDeltaRender = 0.5f;
 		#endregion
 
 		#region Shader
@@ -45,6 +48,7 @@ namespace Assets.Scripts
 		#region Kernels
 		int diffuse_deltas;
 		int set_mass;
+		int share_deltas;
 		int diffuse_forces;
 		int copy_all;
 		int render;
@@ -159,6 +163,9 @@ namespace Assets.Scripts
 				shader.SetInt(nameof(ResolutionX), ResolutionX);
 				shader.SetFloat(nameof(VelocityConservation), VelocityConservation);
 				shader.SetFloat(nameof(MassCollisionDeflectFraction), MassCollisionDeflectFraction);
+				shader.SetFloat(nameof(WaveSpread), WaveSpread);
+				shader.SetFloat(nameof(MaxPressureRender), MaxPressureRender);
+				shader.SetFloat(nameof(MaxDeltaRender), MaxDeltaRender);
 			}
 			// render
 			{
@@ -179,6 +186,11 @@ namespace Assets.Scripts
 				set_mass = shader.FindKernel(nameof(set_mass));
 				sendAll(set_mass);
 			}
+			// share_deltas
+			{
+				share_deltas = shader.FindKernel(nameof(share_deltas));
+				sendAll(share_deltas);
+			}
 			// copy_all
 			{
 				copy_all = shader.FindKernel(nameof(copy_all));
@@ -190,7 +202,8 @@ namespace Assets.Scripts
 		{
 			Run(diffuse_deltas);
 			Run(set_mass);
-			Run(copy_all);
+			Run(share_deltas);
+			//Run(copy_all);
 			Run(render);
 
 			DebugData.SendUpdatesToGpu();

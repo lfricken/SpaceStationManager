@@ -20,8 +20,12 @@ RWTexture2D<float4> FakeMap;
 //////////////
 uint NumSides;
 int ResolutionX;
-float VelocityConservation;
-float MassCollisionDeflectFraction;
+float VelocityConservation; // each tick, how much directional velocity gets lost
+float MassCollisionDeflectFraction; // what fraction of the smaller colliding amount will get squished sideways
+float WaveSpread; // what fraction of mass will move to adjacent cells (maintaining delta direction)
+
+float MaxPressureRender; // max value for color map
+float MaxDeltaRender; // max value for color map
 
 static int2 Offsets[4] =
 {
@@ -32,48 +36,79 @@ static int2 Offsets[4] =
 };
 /////////////
 
-
+// Find the opposite side
 uint switch_side(uint side)
 {
 	return (side + (NumSides / 2)) % NumSides;
 }
+// Just make sure the passed value resolves to a valid side value. (passing in side+1 returns the next side to the left)
 uint rotate_side(uint side)
 {
 	return side % NumSides;
 }
+// Index a 1D array as a 2D array.
 int at(int2 pos)
 {
 	return pos.x + pos.y * ResolutionX;
 }
 
-float4 colorGradient(double value, double min, double  middle, double max)
+// Bound value to [min, max] as [0, 1]
+float normalize(float min, float max, float value)
+{
+	return float((value - min) / (max - min));
+}
+
+// Compute a false color map
+float4 colorGradient(float value, float min, float max)
 {
 	float4 color = float4(0, 0, 0, 1);
 
-	if(value == 0)
-	{
-		return float4(1, 1, 1, 1);
-	}
+	float inc = (max - min) / 6.0;
 
-	// TODO extend this to purple and toward white 
-	// (white is ok since it will be surrounded by purple)
-	if(value > max)
+	float low = min + inc;
+	float middle = low + inc;
+	float high = middle + inc;
+	float ultra = high + inc;
+
+	float darkPurple = 0.2;
+
+	if(value >= max) // dark purple
 	{
-		color.r = 1;
+		color = float4(darkPurple, 0, darkPurple, 1);
 	}
-	else if(value > middle)
+	else if(value >= ultra) // purple to dark purple
 	{
-		// bound the value to [min, max] as [0, 1]
-		float between = float((value - middle) / (max - middle));
+		float between = normalize(ultra, max, value);
+		color.rb = 1 - (1 - darkPurple) * between;
+	}
+	else if(value >= high) // red to purple
+	{
+		float between = normalize(high, ultra, value);
+		color.r = 1;
+		color.b = between;
+	}
+	else if(value >= middle) // green to red
+	{
+		float between = normalize(middle, high, value);
 		color.r = between;
 		color.g = 1 - between;
 	}
-	else
+	else if(value >= low) // blue to green
 	{
-		// bound the value to [min, max] as [0, 1]
-		float between = float((value - min) / (middle - min));
+		float between = normalize(low, middle, value);
 		color.g = between;
 		color.b = 1 - between;
+	}
+	else if(value >= min) // white to blue
+	{
+		float between = normalize(min, low, value);
+		color.r = 1 - between;
+		color.g = 1 - between;
+		color.b = 1;
+	}
+	else
+	{
+		color = float4(1, 1, 1, 1);
 	}
 
 	return color;
@@ -107,7 +142,7 @@ void render(uint3 pix : SV_DispatchThreadID)
 	}
 
 	// pressure map
-	RenderTexture[pos] = colorGradient(p, 0, 0.5, 1);
+	RenderTexture[pos] = colorGradient((float)p, 0, MaxPressureRender);
 
 	// delta map
 	double deltaSum = 0;
@@ -116,10 +151,10 @@ void render(uint3 pix : SV_DispatchThreadID)
 		uint otherSide = switch_side(side);
 		deltaSum += abs(Delta[at(pos)][side] - Delta[at(pos)][otherSide]);
 	}
-	VelocityMap[pos] = colorGradient(deltaSum, 0.0, 0.2, 0.4);
+	VelocityMap[pos] = colorGradient((float)deltaSum, 0.0, MaxDeltaRender);
 }
 
-// Make the deltas sum to M
+// Reduce Deltas and then make the deltas sum to total mass again to diffuse velocity
 void diffuse_deltas(int2 pos, ArrayDouble mass, ArrayDelta deltas)
 {
 	deltas[at(pos)] *= VelocityConservation;
@@ -142,36 +177,32 @@ void diffuse_deltas(uint3 pix : SV_DispatchThreadID)
 	}
 }
 
+// actually move mass deltas to new locations
 void set_mass(int2 pos, ArrayDouble mass, ArrayDelta deltas, ArrayDelta newDeltas)
 {
-	for(uint fromSide2 = 0; fromSide2 < NumSides; ++fromSide2)
+	uint fromSide = 0;
+	for(fromSide = 0; fromSide < NumSides; ++fromSide)
 	{
-		newDeltas[at(pos)][fromSide2] = 0;
+		newDeltas[at(pos)][fromSide] = 0;
 	}
 	double totalContributions = 0;
-	for(uint fromSide = 0; fromSide < NumSides; ++fromSide)
+	// for each side, find the contributions and compute new total mass and deltas
+	for(fromSide = 0; fromSide < NumSides; ++fromSide)
 	{
-		int otherSide = switch_side(fromSide); // reverse the side 
+		int otherSide = switch_side(fromSide);
 		int2 neighbor = Offsets[fromSide] + pos;
 		double thisMassContrib = 0;
-		double thisDeltaContrib = 0;
 		if(IsBlocked[at(neighbor)])
-		{
-			double bounceConservation = 1.0; // delta loss from bouncing off wall
 			thisMassContrib = deltas[at(pos)][fromSide]; // contribute exactly what we would give them
-			thisDeltaContrib = bounceConservation * thisMassContrib;
-		}
 		else
-		{
-			thisMassContrib = deltas[at(neighbor)][otherSide]; // get the neighbor contributions to us.
-			thisDeltaContrib = thisMassContrib;
-		}
-		newDeltas[at(pos)][otherSide] = thisDeltaContrib; // the gas will flow to the opposite tile it came from
+			thisMassContrib = deltas[at(neighbor)][otherSide]; // get the gas the neighbor sends to us
+
+		newDeltas[at(pos)][otherSide] = thisMassContrib; // the gas will flow to the opposite delta it came from
 		totalContributions += thisMassContrib;
 	}
 
-	// move deltas sideways
-	for(uint fromSide = 0; fromSide < NumSides; ++fromSide)
+	// rotate deltas based on collision with other gas (when two opposing gasses collide they squish and move sideways)
+	for(fromSide = 0; fromSide < NumSides; ++fromSide)
 	{
 		int otherSide = switch_side(fromSide); // reverse the side 
 		double val1 = newDeltas[at(pos)][fromSide];
@@ -193,6 +224,32 @@ void set_mass(int2 pos, ArrayDouble mass, ArrayDelta deltas, ArrayDelta newDelta
 void set_mass(uint3 pix : SV_DispatchThreadID)
 {
 	set_mass(pix.xy, Mass, Delta, Delta2);
+}
+
+// move deltas sideways like a wave spreading out
+void share_deltas(int2 pos, ArrayDouble mass, ArrayDelta deltas, ArrayDelta newDeltas)
+{
+	float WaveSpread = 0.1;
+	newDeltas[at(pos)] = deltas[at(pos)];
+
+	for(uint side = 0; side < NumSides; ++side)
+	{
+		double massLeave = deltas[at(pos)][side] * WaveSpread;
+		newDeltas[at(pos)][side] -= massLeave * 2;
+
+		int2 neighborLeft = Offsets[rotate_side(side + 1)] + pos;
+		int2 neighborRight = Offsets[rotate_side(side - 1)] + pos;
+
+		newDeltas[at(pos)][side] += deltas[at(neighborLeft)][side] * WaveSpread;// get left neighbor
+		newDeltas[at(pos)][side] += deltas[at(neighborRight)][side] * WaveSpread;// get left neighbor
+	}
+}
+
+#pragma kernel share_deltas
+[numthreads(8, 8, 1)]
+void share_deltas(uint3 pix : SV_DispatchThreadID)
+{
+	share_deltas(pix.xy, Mass, Delta2, Delta);
 }
 
 
