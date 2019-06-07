@@ -28,13 +28,12 @@ namespace Assets.Scripts
 
 		public RenderTexture RenderTexture;
 		public RenderTexture VelocityMap;
+		public RenderTexture FakeMap;
 
 		const int NumSides = 4;
-		const float Rate = 0.1f;
 		int ResolutionX;
-		const float ViscosityGlobal = 0.01f;
-		const float DtGlobal = 0.01f;
-		const float VelocityConservation = 0.80f;
+		const float VelocityConservation = 0.99f;
+		const float MassCollisionDeflectFraction = 3.0f; // when 2 gasses collide, how much is redirected sideways
 		#endregion
 
 		#region Shader
@@ -65,6 +64,11 @@ namespace Assets.Scripts
 			VelocityMap.enableRandomWrite = true;
 			VelocityMap.Create();
 			VelocityMap.filterMode = FilterMode.Point;
+
+			FakeMap = new RenderTexture(resolution.x, resolution.y, resolution.z);
+			FakeMap.enableRandomWrite = true;
+			FakeMap.Create();
+			FakeMap.filterMode = FilterMode.Point;
 
 			SetupData(resolution);
 			SetupShaders(resolution);
@@ -152,11 +156,9 @@ namespace Assets.Scripts
 			// globals
 			{
 				shader.SetInt(nameof(NumSides), NumSides);
-				shader.SetFloat(nameof(Rate), Rate);
 				shader.SetInt(nameof(ResolutionX), ResolutionX);
-				shader.SetFloat(nameof(ViscosityGlobal), ViscosityGlobal);
-				shader.SetFloat(nameof(DtGlobal), DtGlobal);
 				shader.SetFloat(nameof(VelocityConservation), VelocityConservation);
+				shader.SetFloat(nameof(MassCollisionDeflectFraction), MassCollisionDeflectFraction);
 			}
 			// render
 			{
@@ -165,6 +167,7 @@ namespace Assets.Scripts
 				sendAll(render);
 				shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
 				shader.SetTexture(render, nameof(VelocityMap), VelocityMap);
+				shader.SetTexture(render, nameof(FakeMap), FakeMap);
 			}
 			// diffuse_deltas
 			{

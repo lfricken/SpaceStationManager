@@ -20,7 +20,11 @@ public class GameManager : MonoBehaviour
 			outputImage.material.SetTexture("_MainTex", gas.RenderTexture);
 		}
 		{
-			var velocity = GameObject.Find("velocity/image2").GetComponent<UnityEngine.UI.Image>();
+			var fakemap = GameObject.Find("fake/image").GetComponent<UnityEngine.UI.Image>();
+			fakemap.material.SetTexture("_MainTex", gas.FakeMap);
+		}
+		{
+			var velocity = GameObject.Find("velocity/image").GetComponent<UnityEngine.UI.Image>();
 			velocity.material.SetTexture("_MainTex", gas.VelocityMap);
 		}
 	}
@@ -36,8 +40,8 @@ public class GameManager : MonoBehaviour
 		for (int i = 0; i < 10000; i++)
 		{
 			yield return new WaitForSeconds(0.0166f);
-			for (int n = 0; n < 5; n++)
-				gas.Tick();
+			//for (int n = 0; n < 5; n++)
+			gas.Tick();
 		}
 	}
 }
