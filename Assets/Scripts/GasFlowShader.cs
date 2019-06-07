@@ -32,9 +32,9 @@ namespace Assets.Scripts
 
 		const int NumSides = 4;
 		int ResolutionX;
-		const float VelocityConservation = 0.99f;
-		const float MassCollisionDeflectFraction = 3.0f; // when 2 gasses collide, how much is redirected sideways
-		const float WaveSpread = 0.1f; // 
+		const float VelocityConservation = 0.994f;
+		const float MassCollisionDeflectFraction = 6.0f;
+		const float WaveSpread = 0.1f;
 		const float MaxPressureRender = 2.0f;
 		const float MaxDeltaRender = 0.5f;
 		#endregion
