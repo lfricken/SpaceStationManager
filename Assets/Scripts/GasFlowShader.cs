@@ -22,9 +22,9 @@ namespace Assets.Scripts
 		DataBuffer<Delta> Delta;
 
 		DataBuffer<double> Mass;
-		DataBuffer<double> AddRemoveMass;
+		public DataBuffer<double> AddRemoveMass;
 
-		DataBuffer<int> IsBlocked;
+		public DataBuffer<int> IsBlocked;
 		DataBuffer<int> DebugData;
 
 		public RenderTexture RenderTexture;
@@ -79,7 +79,7 @@ namespace Assets.Scripts
 			SetupShaders(resolution);
 		}
 
-		public void ApplyDelta<T>(Vector2Int start, Vector2Int size, T delta, DataBuffer<T> tiles)
+		void ApplyDelta<T>(Vector2Int start, Vector2Int size, T delta, DataBuffer<T> tiles)
 		{
 			Vector2Int end = start + size;
 			for (int x = start.x; x < end.x; x++)
@@ -212,7 +212,6 @@ namespace Assets.Scripts
 			Run(diffuse_deltas);
 			Run(set_mass);
 			Run(share_deltas);
-			//Run(copy_all);
 			Run(render);
 
 			DebugData.SendUpdatesToGpu();

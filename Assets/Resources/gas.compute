@@ -30,10 +30,10 @@ float MaxDeltaRender; // max value for color map
 
 static int2 Offsets[4] =
 {
-	+int2(1, 0),
-	-int2(0, 1),
-	-int2(1, 0),
-	+int2(0, 1)
+	+int2(1, 0), // right
+	-int2(0, 1), // down
+	-int2(1, 0), // left
+	+int2(0, 1)  // up
 };
 /////////////
 
