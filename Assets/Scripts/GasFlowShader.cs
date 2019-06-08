@@ -22,6 +22,7 @@ namespace Assets.Scripts
 		DataBuffer<Delta> Delta;
 
 		DataBuffer<double> Mass;
+		DataBuffer<double> AddRemoveMass;
 
 		DataBuffer<int> IsBlocked;
 		DataBuffer<int> DebugData;
@@ -32,9 +33,9 @@ namespace Assets.Scripts
 
 		const int NumSides = 4;
 		int ResolutionX;
-		const float VelocityConservation = 0.994f;
+		const float VelocityConservation = 0.998f;
 		const float MassCollisionDeflectFraction = 6.0f;
-		const float WaveSpread = 0.1f;
+		const float WaveSpread = 0.15f;
 		const float MaxPressureRender = 2.0f;
 		const float MaxDeltaRender = 0.5f;
 		#endregion
@@ -98,6 +99,7 @@ namespace Assets.Scripts
 			Delta.SendTo(handle, shader);
 
 			Mass.SendTo(handle, shader);
+			AddRemoveMass.SendTo(handle, shader);
 
 			IsBlocked.SendTo(handle, shader);
 			DebugData.SendTo(handle, shader);
@@ -111,6 +113,7 @@ namespace Assets.Scripts
 			Delta = new DataBuffer<Delta>(nameof(Delta), resolution);
 
 			Mass = new DataBuffer<double>(nameof(Mass), resolution);
+			AddRemoveMass = new DataBuffer<double>(nameof(AddRemoveMass), resolution);
 
 			IsBlocked = new DataBuffer<int>(nameof(IsBlocked), resolution);
 			DebugData = new DataBuffer<int>(nameof(DebugData), new Vector3Int(10, 1, 1));
@@ -128,12 +131,14 @@ namespace Assets.Scripts
 					IsBlocked.AddDelta(new Vector2Int(0, y), 1);
 					IsBlocked.AddDelta(new Vector2Int(resolution.x - 1, y), 1);
 				}
-				ApplyDelta(new Vector2Int(5, 10), new Vector2Int(resolution.x - 80, 1), 1, IsBlocked);
+				ApplyDelta(new Vector2Int(0, 20), new Vector2Int(resolution.x - 5, 1), 1, IsBlocked);
+				ApplyDelta(new Vector2Int(0, 10), new Vector2Int(resolution.x / 2, 1), 1, IsBlocked);
+				ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x - 5, 1), 1, IsBlocked);
 
 				//ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x, 1), 1, IsBlocked);
 				IsBlocked.SendUpdatesToGpu();
 			}
-			
+
 			//Delta d = new Delta { r = 1, d = 1, l = 1, u = 1, };
 			//ApplyDelta(new Vector2Int(4, 4), new Vector2Int(5, 1), d, Delta);
 			Delta.SendUpdatesToGpu();
@@ -144,11 +149,15 @@ namespace Assets.Scripts
 
 			// pressure
 			{
-				var center = new Vector2Int(3, 1);// new Vector2Int(resolution.x / 2, resolution.y / 2);
+				var center = new Vector2Int(1, 1);// new Vector2Int(resolution.x / 2, resolution.y / 2);
 				var p = resolution.x * resolution.x / 2;
 
-				Mass.AddDelta(center, p);
-				Mass.SendUpdatesToGpu();
+				//Mass.AddDelta(center, p);
+				//Mass.SendUpdatesToGpu();
+
+				AddRemoveMass.AddDelta(center, 0.5);
+				AddRemoveMass.AddDelta(new Vector2Int(20, 30), -0.5);
+				AddRemoveMass.SendUpdatesToGpu();
 			}
 		}
 

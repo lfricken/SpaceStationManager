@@ -9,6 +9,7 @@ ArrayDelta Delta2;
 ArrayDelta Delta;
 
 ArrayDouble Mass;
+ArrayDouble AddRemoveMass;
 
 ArrayInt IsBlocked;
 ArrayInt DebugData;
@@ -216,6 +217,11 @@ void set_mass(int2 pos, ArrayDouble mass, ArrayDelta deltas, ArrayDelta newDelta
 		newDeltas[at(pos)][rotate_side(fromSide + 1)] += halfMass;
 		newDeltas[at(pos)][rotate_side(fromSide - 1)] += halfMass;
 	}
+
+
+	totalContributions += AddRemoveMass[at(pos)];
+	totalContributions = max(0, totalContributions);
+
 	mass[at(pos)] = totalContributions;
 }
 
@@ -240,8 +246,15 @@ void share_deltas(int2 pos, ArrayDouble mass, ArrayDelta deltas, ArrayDelta newD
 		int2 neighborLeft = Offsets[rotate_side(side + 1)] + pos;
 		int2 neighborRight = Offsets[rotate_side(side - 1)] + pos;
 
-		newDeltas[at(pos)][side] += deltas[at(neighborLeft)][side] * WaveSpread;// get left neighbor
-		newDeltas[at(pos)][side] += deltas[at(neighborRight)][side] * WaveSpread;// get left neighbor
+		if(IsBlocked[at(neighborLeft)])
+			newDeltas[at(pos)][side] += massLeave;
+		else
+			newDeltas[at(pos)][side] += deltas[at(neighborLeft)][side] * WaveSpread;// get left neighbor
+
+		if(IsBlocked[at(neighborRight)])
+			newDeltas[at(pos)][side] += massLeave;
+		else
+			newDeltas[at(pos)][side] += deltas[at(neighborRight)][side] * WaveSpread;// get left neighbor
 	}
 }
 
