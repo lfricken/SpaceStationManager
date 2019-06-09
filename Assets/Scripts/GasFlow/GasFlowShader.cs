@@ -1,8 +1,9 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace SSM
 {
-	struct Delta
+	public struct Delta
 	{
 		public double r;
 		public double d;
@@ -24,6 +25,8 @@ namespace SSM
 		public DataBuffer<int> IsBlocked;
 		DataBuffer<int> DebugData;
 
+		public List<RenderTexture> RenderTextures;
+
 		public RenderTexture RenderTexture;
 		public RenderTexture VelocityMap;
 		public RenderTexture FakeMap;
@@ -39,7 +42,7 @@ namespace SSM
 
 		#region Shader
 		readonly int numXYThreads = 8; // If you update this, you need to update gas.compute!
-		int threadGroups;
+		readonly int threadGroups;
 		ComputeShader shader;
 		#endregion
 
@@ -47,8 +50,6 @@ namespace SSM
 		int diffuse_deltas;
 		int set_mass;
 		int share_deltas;
-		int diffuse_forces;
-		int copy_all;
 		int render;
 		#endregion
 
@@ -72,6 +73,10 @@ namespace SSM
 			FakeMap.Create();
 			FakeMap.filterMode = FilterMode.Point;
 
+			RenderTextures = new List<RenderTexture>();
+			RenderTextures.Add(RenderTexture);
+			RenderTextures.Add(VelocityMap);
+
 			SetupData(resolution);
 			SetupShaders(resolution);
 		}
@@ -90,7 +95,7 @@ namespace SSM
 			tiles.SendUpdatesToGpu();
 		}
 
-		void sendAll(int handle)
+		void SendAll(int handle)
 		{
 			Delta2.SendTo(handle, shader);
 			Delta.SendTo(handle, shader);
@@ -167,7 +172,7 @@ namespace SSM
 			{
 				render = shader.FindKernel(nameof(render));
 
-				sendAll(render);
+				SendAll(render);
 				shader.SetTexture(render, nameof(RenderTexture), RenderTexture);
 				shader.SetTexture(render, nameof(VelocityMap), VelocityMap);
 				shader.SetTexture(render, nameof(FakeMap), FakeMap);
@@ -175,22 +180,17 @@ namespace SSM
 			// diffuse_deltas
 			{
 				diffuse_deltas = shader.FindKernel(nameof(diffuse_deltas));
-				sendAll(diffuse_deltas);
+				SendAll(diffuse_deltas);
 			}
 			// set_mass
 			{
 				set_mass = shader.FindKernel(nameof(set_mass));
-				sendAll(set_mass);
+				SendAll(set_mass);
 			}
 			// share_deltas
 			{
 				share_deltas = shader.FindKernel(nameof(share_deltas));
-				sendAll(share_deltas);
-			}
-			// copy_all
-			{
-				copy_all = shader.FindKernel(nameof(copy_all));
-				sendAll(copy_all);
+				SendAll(share_deltas);
 			}
 		}
 

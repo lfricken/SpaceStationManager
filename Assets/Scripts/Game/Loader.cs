@@ -9,6 +9,8 @@ namespace SSM
 			gameObject.AddComponent<GameManager>();
 			gameObject.AddComponent<WindowManager>();
 			gameObject.AddComponent<CameraManager>();
+			gameObject.AddComponent<GasflowManager>();
+			gameObject.AddComponent<OverlayManager>();
 		}
 	}
 }

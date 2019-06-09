@@ -15,8 +15,7 @@ namespace SSM
 			if (lastScreenSize != size)
 			{
 				lastScreenSize = size;
-				if (OnScreenSizeChange != null)
-					OnScreenSizeChange(size);
+				OnScreenSizeChange?.Invoke(size);
 			}
 		}
 	}

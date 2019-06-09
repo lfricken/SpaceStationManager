@@ -3,18 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{3D65A02C-BDED-547B-B2EF-E5C7894B1847}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GasFlow", "GasFlow\GasFlow.csproj", "{C779132E-62B0-4830-9BA0-1E2E196F8D66}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GasFlow.UnitTests", "GasFlow.UnitTests\GasFlow.UnitTests.csproj", "{0836411D-FF7D-4122-8C58-1F10F1D96786}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestGround", "TestGround\TestGround.csproj", "{E7633476-DD14-4F3D-AEFB-3CF34CA54E76}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FastGas", "FastGas\FastGas.vcxproj", "{3CE3BB89-9A48-4333-BEB1-1C6E1E21BD8B}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FastGas.UnitTests", "FastGas.UnitTests\FastGas.UnitTests.vcxproj", "{9A7A0CA1-6763-4BA1-8E3B-B4A486A083C7}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shaderDebug", "..\shaderDebug\shaderDebug.vcxproj", "{E0F0E945-8A50-49F4-ADAF-5D5BB75BDC00}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,30 +13,6 @@ Global
 		{3D65A02C-BDED-547B-B2EF-E5C7894B1847}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D65A02C-BDED-547B-B2EF-E5C7894B1847}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D65A02C-BDED-547B-B2EF-E5C7894B1847}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C779132E-62B0-4830-9BA0-1E2E196F8D66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C779132E-62B0-4830-9BA0-1E2E196F8D66}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C779132E-62B0-4830-9BA0-1E2E196F8D66}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C779132E-62B0-4830-9BA0-1E2E196F8D66}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0836411D-FF7D-4122-8C58-1F10F1D96786}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0836411D-FF7D-4122-8C58-1F10F1D96786}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0836411D-FF7D-4122-8C58-1F10F1D96786}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0836411D-FF7D-4122-8C58-1F10F1D96786}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E7633476-DD14-4F3D-AEFB-3CF34CA54E76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E7633476-DD14-4F3D-AEFB-3CF34CA54E76}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E7633476-DD14-4F3D-AEFB-3CF34CA54E76}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E7633476-DD14-4F3D-AEFB-3CF34CA54E76}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3CE3BB89-9A48-4333-BEB1-1C6E1E21BD8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3CE3BB89-9A48-4333-BEB1-1C6E1E21BD8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3CE3BB89-9A48-4333-BEB1-1C6E1E21BD8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3CE3BB89-9A48-4333-BEB1-1C6E1E21BD8B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9A7A0CA1-6763-4BA1-8E3B-B4A486A083C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9A7A0CA1-6763-4BA1-8E3B-B4A486A083C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9A7A0CA1-6763-4BA1-8E3B-B4A486A083C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9A7A0CA1-6763-4BA1-8E3B-B4A486A083C7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E0F0E945-8A50-49F4-ADAF-5D5BB75BDC00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E0F0E945-8A50-49F4-ADAF-5D5BB75BDC00}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E0F0E945-8A50-49F4-ADAF-5D5BB75BDC00}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E0F0E945-8A50-49F4-ADAF-5D5BB75BDC00}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
