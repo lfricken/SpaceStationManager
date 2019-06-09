@@ -62,10 +62,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\DataBuffer.cs" />
-    <Compile Include="Assets\Scripts\GameManager.cs" />
-    <Compile Include="Assets\Scripts\GasFlowShader.cs" />
-    <Compile Include="Assets\Scripts\GlobalSuppressions.cs" />
+    <Compile Include="Assets\Scripts\Core\GlobalSuppressions.cs" />
+    <Compile Include="Assets\Scripts\Core\SingletonMonoBehaviour.cs" />
+    <Compile Include="Assets\Scripts\Game\CameraManager.cs" />
+    <Compile Include="Assets\Scripts\Game\GameManager.cs" />
+    <Compile Include="Assets\Scripts\Game\Loader.cs" />
+    <Compile Include="Assets\Scripts\Game\WindowManager.cs" />
+    <Compile Include="Assets\Scripts\GasFlow\DataBuffer.cs" />
+    <Compile Include="Assets\Scripts\GasFlow\GasFlowShader.cs" />
     <None Include="Assets\Resources\gas.compute" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/dev/SpaceStationManager/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
