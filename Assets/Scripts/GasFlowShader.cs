@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Assets.Scripts
 {
@@ -135,25 +132,15 @@ namespace Assets.Scripts
 				ApplyDelta(new Vector2Int(0, 10), new Vector2Int(resolution.x / 2, 1), 1, IsBlocked);
 				ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x - 5, 1), 1, IsBlocked);
 
-				//ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x, 1), 1, IsBlocked);
 				IsBlocked.SendUpdatesToGpu();
 			}
 
-			//Delta d = new Delta { r = 1, d = 1, l = 1, u = 1, };
-			//ApplyDelta(new Vector2Int(4, 4), new Vector2Int(5, 1), d, Delta);
 			Delta.SendUpdatesToGpu();
-
-			//// pressure
-			//ApplyDelta(new Vector2Int(5, 5), new Vector2Int(1, 1), 10f, Mass);
-			//Mass.SendUpdatesToGpu();
 
 			// pressure
 			{
 				var center = new Vector2Int(1, 1);// new Vector2Int(resolution.x / 2, resolution.y / 2);
 				var p = resolution.x * resolution.x / 2;
-
-				//Mass.AddDelta(center, p);
-				//Mass.SendUpdatesToGpu();
 
 				AddRemoveMass.AddDelta(center, 0.5);
 				AddRemoveMass.AddDelta(new Vector2Int(20, 30), -0.5);
@@ -213,10 +200,6 @@ namespace Assets.Scripts
 			Run(set_mass);
 			Run(share_deltas);
 			Run(render);
-
-			DebugData.SendUpdatesToGpu();
-
-			//Debug.Log(DebugData.cpuData[0]);
 		}
 
 		void Run(int handle)

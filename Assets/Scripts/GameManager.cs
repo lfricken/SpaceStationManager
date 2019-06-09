@@ -18,14 +18,17 @@ public class GameManager : MonoBehaviour
 		{
 			var outputImage = GameObject.Find("canvas/image").GetComponent<UnityEngine.UI.Image>();
 			outputImage.material.SetTexture("_MainTex", gas.RenderTexture);
+			outputImage.canvas.pixelPerfect = true;
 		}
 		{
 			var fakemap = GameObject.Find("fake/image").GetComponent<UnityEngine.UI.Image>();
 			fakemap.material.SetTexture("_MainTex", gas.FakeMap);
+			fakemap.canvas.pixelPerfect = true;
 		}
 		{
 			var velocity = GameObject.Find("velocity/image").GetComponent<UnityEngine.UI.Image>();
 			velocity.material.SetTexture("_MainTex", gas.VelocityMap);
+			velocity.canvas.pixelPerfect = true;
 		}
 	}
 
