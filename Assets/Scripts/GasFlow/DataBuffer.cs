@@ -27,6 +27,13 @@ namespace SSM
 					cpuData[i] = default;
 		}
 
+		public void Dispose()
+		{
+			if (gpuBuffer != null)
+				gpuBuffer.Dispose();
+			gpuBuffer = null;
+		}
+
 		int index(Vector2Int position)
 		{
 			return position.x + position.y * xRes;

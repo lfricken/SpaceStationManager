@@ -206,5 +206,17 @@ namespace SSM
 		{
 			shader.Dispatch(handle, threadGroups, threadGroups, 1);
 		}
+
+		public void Dispose()
+		{
+			Mass.Dispose();
+			Delta2.Dispose();
+			Delta.Dispose();
+
+			AddRemoveMass.Dispose();
+
+			IsBlocked.Dispose();
+			DebugData.Dispose();
+		}
 	}
 }

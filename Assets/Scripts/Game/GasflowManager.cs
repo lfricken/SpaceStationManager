@@ -25,6 +25,11 @@ namespace SSM
 
 		}
 
+		private void OnDestroy()
+		{
+			gas.Dispose();
+		}
+
 		IEnumerator Tick()
 		{
 			for (int i = 0; i < 10000; i++)
