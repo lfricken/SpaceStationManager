@@ -27,10 +27,12 @@ namespace SSM
 			return Quaternion.Euler(0f, 0f, 0f);
 		}
 
-		[MenuItem("Assets/Create/Tiles/Simple Tile", false, 0)]
-		public static void CreateSimpleTile()
+#if UNITY_EDITOR
+		[MenuItem("Assets/Create/Tiles/Tile", false, 0)]
+		public static void MenuCreate()
 		{
-			TileBuilder.CreateTile<Tile>(LayerType.None, "SimpleTile");
+			AssetDatabase.CreateAsset(new Tile(), $"Assets/{nameof(Tile)}.asset");
 		}
+#endif
 	}
 }

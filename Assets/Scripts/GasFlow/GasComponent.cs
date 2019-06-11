@@ -1,0 +1,7 @@
+﻿
+namespace SSM
+{
+	class GasComponent
+	{
+	}
+}

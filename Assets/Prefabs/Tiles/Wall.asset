@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 14c6f39f70739814d9e6ab223d3abeef, type: 3}
-  m_Name: SimpleTile
+  m_Name: Wall
   m_EditorClassIdentifier: 
-  LayerType: 2
-  TileType: 1
+  LayerType: 0
+  TileType: 0
   Object: {fileID: 6547851316537179026, guid: edb68375294e13447a9be2b16c6f47ba, type: 3}

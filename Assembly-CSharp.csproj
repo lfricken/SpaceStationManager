@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Core\SingletonMonoBehaviour.cs" />
+    <Compile Include="Assets\Scripts\Core\Types.cs" />
     <Compile Include="Assets\Scripts\Game\CameraManager.cs" />
     <Compile Include="Assets\Scripts\Game\GameManager.cs" />
     <Compile Include="Assets\Scripts\Game\GasflowManager.cs" />
@@ -70,11 +71,10 @@
     <Compile Include="Assets\Scripts\Game\OverlayManager.cs" />
     <Compile Include="Assets\Scripts\Game\WindowManager.cs" />
     <Compile Include="Assets\Scripts\GasFlow\DataBuffer.cs" />
+    <Compile Include="Assets\Scripts\GasFlow\GasComponent.cs" />
     <Compile Include="Assets\Scripts\GasFlow\GasFlowShader.cs" />
-    <Compile Include="Assets\Scripts\Tile.cs" />
-    <Compile Include="Assets\Scripts\TileBuilder.cs" />
-    <Compile Include="Assets\Scripts\TileMenu.cs" />
-    <Compile Include="Assets\Scripts\Types.cs" />
+    <Compile Include="Assets\Scripts\Tile\Tile.cs" />
+    <Compile Include="Assets\Scripts\UnityEditor\MenuItemBuilder.cs" />
     <None Include="Assets\Resources\gas.compute" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/dev/SpaceStationManager/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
@@ -285,12 +285,6 @@
     </Reference>
     <Reference Include="nunit.framework">
       <HintPath>D:/programs/Unity/2019.1.5f1/Editor/Data/UnityExtensions/Unity/TestRunner/net35/unity-custom/nunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>C:/dev/SpaceStationManager/Assets/Dependencies/bin/UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.SharedInternalsModule">
-      <HintPath>C:/dev/SpaceStationManager/Assets/Dependencies/bin/UnityEngine.SharedInternalsModule.dll</HintPath>
     </Reference>
     <Reference Include="Unity.Analytics.Editor">
       <HintPath>C:/dev/SpaceStationManager/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Editor.dll</HintPath>
