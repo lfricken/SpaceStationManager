@@ -31,7 +31,7 @@ namespace SSM
 		[MenuItem("Assets/Create/Tiles/Tile", false, 0)]
 		public static void MenuCreate()
 		{
-			AssetDatabase.CreateAsset(new Tile(), $"Assets/{nameof(Tile)}.asset");
+			MenuItemBuilder.CreateAsset<Tile>(nameof(Tile));
 		}
 #endif
 	}

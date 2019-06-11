@@ -10,7 +10,7 @@ namespace SSM
 		/// Creates the asset with the given name at the given path.
 		/// Automatically increments the number if it already exists.
 		/// </summary>
-		public static void CreateAsset(Object asset, string name, string newPath = null)
+		public static void CreateAsset<T>(string name, string newPath = null) where T : ScriptableObject
 		{
 			string path = newPath ?? GetPath();
 			string assetPath = Path.Combine(path, name + ".asset");
@@ -24,7 +24,7 @@ namespace SSM
 			if (folder != null)
 			{
 				Directory.CreateDirectory(folder);
-				AssetDatabase.CreateAsset(asset, assetPath);
+				AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<T>(), assetPath);
 			}
 		}
 
