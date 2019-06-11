@@ -20,9 +20,9 @@ namespace Game
 		/// <summary>
 		/// Adds or subtracts this much mass per second to this cell.
 		/// </summary>
-		public float DeltaMass;
+		public float DeltaMassPerSecond;
 		
-		private void Start()
+		void Start()
 		{
 
 		}

@@ -4,26 +4,23 @@ using UnityEngine.Tilemaps;
 
 namespace Game
 {
+	/// <summary>
+	/// 
+	/// </summary>
 	public class Tile : TileBase
 	{
-		public virtual Sprite PreviewSprite { get; protected set; }
-
+		public Sprite Sprite;
 		public LayerType LayerType;
 		public TileType TileType;
 		public GameObject Object;
 
 		public override void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData)
 		{
-			tileData.sprite = Object.GetComponent<SpriteRenderer>().sprite;
+			tileData.sprite = Sprite;
 			tileData.color = Color.white;
-			tileData.transform.SetTRS(Vector3.zero, GetRotation(), Vector3.one);
 			tileData.gameObject = Object;
 			tileData.flags = TileFlags.None;
-		}
-
-		private Quaternion GetRotation()
-		{
-			return Quaternion.Euler(0f, 0f, 0f);
+			tileData.transform = tilemap.GetTransformMatrix(position);
 		}
 
 #if UNITY_EDITOR

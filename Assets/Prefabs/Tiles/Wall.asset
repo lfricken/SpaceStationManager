@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14c6f39f70739814d9e6ab223d3abeef, type: 3}
   m_Name: Wall
   m_EditorClassIdentifier: 
+  Sprite: {fileID: -8185252286816643056, guid: 1c57688a45b2e2d4bbf79ccc5906e86c, type: 3}
   LayerType: 0
   TileType: 0
-  Object: {fileID: 6547851316537179026, guid: edb68375294e13447a9be2b16c6f47ba, type: 3}
+  Object: {fileID: 3759818302372141732, guid: 0bda80437f2d0384f8e32357cf127239, type: 3}

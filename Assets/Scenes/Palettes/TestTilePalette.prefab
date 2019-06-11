@@ -47,7 +47,8 @@ Tilemap:
       m_TileSpriteIndex: 15
       m_TileMatrixIndex: 0
       m_TileColorIndex: 1
-      m_ObjectToInstantiate: {fileID: 0}
+      m_ObjectToInstantiate: {fileID: 3759818302372141732, guid: 0bda80437f2d0384f8e32357cf127239,
+        type: 3}
       m_TileFlags: 0
       m_ColliderType: 0
   m_AnimatedTiles: {}
