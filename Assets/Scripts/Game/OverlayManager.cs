@@ -40,8 +40,8 @@ namespace Game
 
 				RectTransform t = go.GetComponent<RectTransform>();
 
-				t.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, gfm.Resolution.x);
-				t.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, gfm.Resolution.y);
+				t.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, gfm.Resolution.x / 4);
+				t.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, gfm.Resolution.y / 4);
 				++num;
 			}
 

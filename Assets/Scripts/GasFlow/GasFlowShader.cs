@@ -147,7 +147,7 @@ namespace Game
 				var center = new Vector2Int(1, 1);// new Vector2Int(resolution.x / 2, resolution.y / 2);
 				var p = resolution.x * resolution.x / 2;
 
-				//Mass.AddDelta(center, 20);
+				Mass.AddDelta(center, 20);
 				Mass.SendUpdatesToGpu();
 
 				//AddRemoveMass.AddDelta(center, 0.1);

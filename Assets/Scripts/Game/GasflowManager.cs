@@ -34,7 +34,7 @@ namespace Game
 		{
 			for (int i = 0; i < 10000; i++)
 			{
-				yield return new WaitForSeconds(0.166f);
+				yield return new WaitForSeconds(0.0166f);
 				//for (int n = 0; n < 5; n++)
 				gas.Tick();
 			}
