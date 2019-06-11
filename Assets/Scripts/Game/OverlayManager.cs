@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace SSM
+namespace Game
 {
 	public class OverlayManager : SingletonMonoBehavior<OverlayManager>
 	{

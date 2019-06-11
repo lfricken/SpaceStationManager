@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.U2D;
 
-namespace SSM
+namespace Game
 {
 	public class CameraManager : SingletonMonoBehavior<CameraManager>
 	{

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace SSM
+namespace Game
 {
 	public class WindowManager : SingletonMonoBehavior<WindowManager>
 	{

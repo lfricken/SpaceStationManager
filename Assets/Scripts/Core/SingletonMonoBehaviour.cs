@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace SSM
+namespace Game
 {
 	public abstract class SingletonMonoBehavior<T> : MonoBehaviour where T : class
 	{

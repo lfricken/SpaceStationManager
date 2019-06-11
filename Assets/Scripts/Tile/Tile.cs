@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-namespace SSM
+namespace Game
 {
 	public class Tile : TileBase
 	{
@@ -16,8 +16,9 @@ namespace SSM
 		{
 			tileData.sprite = Object.GetComponent<SpriteRenderer>().sprite;
 			tileData.color = Color.white;
-			tileData.flags = TileFlags.None;
 			tileData.transform.SetTRS(Vector3.zero, GetRotation(), Vector3.one);
+			tileData.gameObject = Object;
+			tileData.flags = TileFlags.None;
 		}
 
 		private Quaternion GetRotation()

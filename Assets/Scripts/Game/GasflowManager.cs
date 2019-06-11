@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 
-namespace SSM
+namespace Game
 {
 	public class GasflowManager : SingletonMonoBehavior<GasflowManager>
 	{

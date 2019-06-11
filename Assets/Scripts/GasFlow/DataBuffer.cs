@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-namespace SSM
+namespace Game
 {
 	public class DataBuffer<Data>
 	{

@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace SSM
+namespace Game
 {
 	public class MenuItemBuilder : MonoBehaviour
 	{

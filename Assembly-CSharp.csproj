@@ -10,7 +10,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <RootNamespace></RootNamespace>
+    <RootNamespace>
+    </RootNamespace>
     <ProjectGuid>{3D65A02C-BDED-547B-B2EF-E5C7894B1847}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -62,6 +63,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Core\GameMonoBehaviour.cs" />
     <Compile Include="Assets\Scripts\Core\SingletonMonoBehaviour.cs" />
     <Compile Include="Assets\Scripts\Core\Types.cs" />
     <Compile Include="Assets\Scripts\Game\CameraManager.cs" />

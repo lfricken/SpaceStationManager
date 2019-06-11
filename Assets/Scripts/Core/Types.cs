@@ -1,4 +1,4 @@
-﻿namespace SSM
+﻿namespace Game
 {
 	public enum TileType
 	{

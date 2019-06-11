@@ -1,7 +1,13 @@
 ﻿
-namespace SSM
+using UnityEngine;
+
+namespace Game
 {
-	class GasComponent
+	public class GasComponent : MonoBehaviour
 	{
+		private void Start()
+		{
+
+		}
 	}
 }
