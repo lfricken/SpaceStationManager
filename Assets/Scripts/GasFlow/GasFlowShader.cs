@@ -36,7 +36,7 @@ namespace Game
 		const float VelocityConservation = 0.998f;
 		const float MassCollisionDeflectFraction = 6.0f;
 		const float WaveSpread = 0.15f;
-		const float MaxPressureRender = 2.0f;
+		const float MaxPressureRender = 20.0f;
 		const float MaxDeltaRender = 0.5f;
 		#endregion
 
@@ -147,8 +147,11 @@ namespace Game
 				var center = new Vector2Int(1, 1);// new Vector2Int(resolution.x / 2, resolution.y / 2);
 				var p = resolution.x * resolution.x / 2;
 
-				AddRemoveMass.AddDelta(center, 0.5);
-				AddRemoveMass.AddDelta(new Vector2Int(20, 30), -0.5);
+				//Mass.AddDelta(center, 20);
+				Mass.SendUpdatesToGpu();
+
+				//AddRemoveMass.AddDelta(center, 0.1);
+				//AddRemoveMass.AddDelta(new Vector2Int(20, 30), -0.5);
 				AddRemoveMass.SendUpdatesToGpu();
 			}
 		}
