@@ -15,11 +15,9 @@ namespace SSM
 		public override void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData)
 		{
 			tileData.sprite = Object.GetComponent<SpriteRenderer>().sprite;
-			tileData.color = Color.red;
+			tileData.color = Color.white;
 			tileData.flags = TileFlags.None;
-			var m = tileData.transform;
-			m.SetTRS(Vector3.zero, GetRotation(), Vector3.one);
-			tileData.transform = m;
+			tileData.transform.SetTRS(Vector3.zero, GetRotation(), Vector3.one);
 		}
 
 		private Quaternion GetRotation()
