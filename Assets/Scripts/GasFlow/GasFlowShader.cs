@@ -36,7 +36,7 @@ namespace Game
 		const float VelocityConservation = 0.998f;
 		const float MassCollisionDeflectFraction = 6.0f;
 		const float WaveSpread = 0.15f;
-		const float MaxPressureRender = 20.0f;
+		const float MaxPressureRender = 2.0f;
 		const float MaxDeltaRender = 0.5f;
 		#endregion
 
@@ -137,10 +137,8 @@ namespace Game
 				ApplyDelta(new Vector2Int(0, 10), new Vector2Int(resolution.x / 2, 1), 1, IsBlocked);
 				ApplyDelta(new Vector2Int(0, 2), new Vector2Int(resolution.x - 5, 1), 1, IsBlocked);
 
-				IsBlocked.SendUpdatesToGpu();
 			}
 
-			Delta.SendUpdatesToGpu();
 
 			// pressure
 			{
@@ -152,7 +150,6 @@ namespace Game
 
 				//AddRemoveMass.AddDelta(center, 0.1);
 				//AddRemoveMass.AddDelta(new Vector2Int(20, 30), -0.5);
-				AddRemoveMass.SendUpdatesToGpu();
 			}
 		}
 
@@ -212,14 +209,14 @@ namespace Game
 
 		public void Dispose()
 		{
-			Mass.Dispose();
-			Delta2.Dispose();
-			Delta.Dispose();
+			//Mass.Dispose();
+			//Delta2.Dispose();
+			//Delta.Dispose();
 
-			AddRemoveMass.Dispose();
+			//AddRemoveMass.Dispose();
 
-			IsBlocked.Dispose();
-			DebugData.Dispose();
+			//IsBlocked.Dispose();
+			//DebugData.Dispose();
 		}
 	}
 }
