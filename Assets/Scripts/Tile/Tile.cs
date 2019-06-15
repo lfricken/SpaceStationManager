@@ -18,7 +18,6 @@ namespace Game
 		{
 			tileData.sprite = Sprite;
 			tileData.color = Color.white;
-			tileData.gameObject = Object;
 			tileData.flags = TileFlags.None;
 			tileData.transform = tilemap.GetTransformMatrix(position);
 		}
