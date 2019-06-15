@@ -23,7 +23,7 @@ namespace Game
 				if (rend.color.a == 0)
 					rend.color = Color.white;
 				else
-					rend.color = Color.clear;
+					rend.color = Color.white;
 
 			}
 		}
