@@ -2,7 +2,7 @@
 
 namespace Game
 {
-	public class GameMonoBehaviour : MonoBehaviour
+	public class GameMonoBehaviour : MonoBehaviour, IBuildable
 	{
 
 	}
