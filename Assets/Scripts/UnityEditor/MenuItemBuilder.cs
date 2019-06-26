@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Game
 {
+#if UNITY_EDITOR
 	public class MenuItemBuilder : MonoBehaviour
 	{
 		/// <summary>
@@ -44,4 +45,5 @@ namespace Game
 			return path;
 		}
 	}
+#endif
 }
