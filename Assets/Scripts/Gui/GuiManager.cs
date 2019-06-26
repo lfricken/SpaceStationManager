@@ -4,7 +4,21 @@ namespace Game
 {
 	public class GuiManager : GameMonoBehaviour
 	{
+		public Vector2Int SubSize;
+
 		public Rect windowRect = new Rect(0, 0, 600, 200);
+
+		void Start()
+		{
+			SubSize = new Vector2Int(200, 200);
+			WindowManager.Instance.OnScreenSizeChange += OnScreenSizeChange;
+		}
+
+		private void OnScreenSizeChange(Vector2Int size)
+		{
+			windowRect = new Rect(0, size.y - SubSize.y, SubSize.x, SubSize.y);
+		}
+
 
 		void OnGUI()
 		{
