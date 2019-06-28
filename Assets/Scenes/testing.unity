@@ -224,6 +224,12 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &802862473 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8573695569659564993, guid: 785eb98f76262c34884d6971ba18c4de,
+    type: 3}
+  m_PrefabInstance: {fileID: 4816156022227691954}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1068230966
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -440,7 +446,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
-  BlueprintObject: {fileID: 0}
+  BlueprintObject: {fileID: 802862473}
 --- !u!1001 &4816156022227691954
 PrefabInstance:
   m_ObjectHideFlags: 0

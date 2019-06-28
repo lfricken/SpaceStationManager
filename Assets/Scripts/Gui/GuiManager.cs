@@ -1,9 +1,12 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 
 namespace Game
 {
 	public class GuiManager : GameMonoBehaviour
 	{
+		public Button button;
+
 		public Vector2Int SubSize;
 
 		public Rect windowRect = new Rect(0, 0, 600, 200);
