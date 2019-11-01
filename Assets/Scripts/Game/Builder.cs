@@ -63,7 +63,7 @@ namespace Game
 		{
 			Vector3 pz = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 			pz.z = 0;
-			currentPlaceableObject.transform.position = pz;
+			currentPlaceableObject.transform.position = ForceGrid.ToGrid(pz);
 		}
 
 		private void RotateFromMouseWheel()
