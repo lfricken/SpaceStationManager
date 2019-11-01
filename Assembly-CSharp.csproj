@@ -79,11 +79,13 @@
     <Compile Include="Assets\Scripts\GasFlow\DataBuffer.cs" />
     <Compile Include="Assets\Scripts\GasFlow\GasComponent.cs" />
     <Compile Include="Assets\Scripts\GasFlow\GasFlowShader.cs" />
+    <Compile Include="Assets\Scripts\GasFlow\ParticleShader.cs" />
     <Compile Include="Assets\Scripts\Gui\GuiManager.cs" />
     <Compile Include="Assets\Scripts\Tile\Tile.cs" />
     <Compile Include="Assets\Scripts\UnityEditor\LevelBrush.cs" />
     <Compile Include="Assets\Scripts\UnityEditor\LevelBrushEditor.cs" />
     <Compile Include="Assets\Scripts\UnityEditor\MenuItemBuilder.cs" />
+    <None Include="Assets\Resources\particle.compute" />
     <None Include="Assets\Resources\gas.compute" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/dev/SpaceStationManager/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>

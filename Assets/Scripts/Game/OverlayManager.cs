@@ -6,9 +6,10 @@ namespace Game
 {
 	public class OverlayManager : SingletonMonoBehavior<OverlayManager>
 	{
-		public float OverlayTransparency = 0.5f;
+		public float OverlayAlpha = 0.9f;
 		private List<Image> overlays;
 		private MapOverlay Active;
+		private Vector2Int size;
 
 		public enum MapOverlay
 		{
@@ -19,6 +20,7 @@ namespace Game
 
 		OverlayManager()
 		{
+			size = new Vector2Int(10,10);
 			overlays = new List<Image>();
 		}
 
@@ -40,8 +42,8 @@ namespace Game
 
 				RectTransform t = go.GetComponent<RectTransform>();
 
-				t.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, gfm.Resolution.x / 4);
-				t.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, gfm.Resolution.y / 4);
+				t.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, gfm.Resolution.x * size.x / i.material.mainTexture.width);
+				t.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, gfm.Resolution.y * size.y / i.material.mainTexture.height);
 				++num;
 			}
 
@@ -68,9 +70,9 @@ namespace Game
 			{
 				Active = type;
 				if (MapOverlay.GasPressure == type)
-					overlays[(int)MapOverlay.GasPressure].color = new Color(1, 1, 1, OverlayTransparency);
+					overlays[(int)MapOverlay.GasPressure].color = new Color(1, 1, 1, OverlayAlpha);
 				if (MapOverlay.GasVelocity == type)
-					overlays[(int)MapOverlay.GasVelocity].color = new Color(1, 1, 1, OverlayTransparency);
+					overlays[(int)MapOverlay.GasVelocity].color = new Color(1, 1, 1, OverlayAlpha);
 			}
 
 		}

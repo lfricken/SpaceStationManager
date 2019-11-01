@@ -15,8 +15,10 @@ namespace Game
 
 		private void Start()
 		{
-			Resolution = new Vector3Int(32, 32, 32);
+			Resolution = new Vector3Int(256, 256, 32);
 			gas = new GasFlowGpu(Resolution);
+			gas.AddRemoveMass.AddDelta(new Vector2Int(100, 100), 10);
+			gas.AddRemoveMass.SendUpdatesToGpu();
 			StartCoroutine(Tick());
 		}
 
@@ -32,6 +34,7 @@ namespace Game
 
 		IEnumerator Tick()
 		{
+			//gas.Init();
 			for (int i = 0; i < 10000; i++)
 			{
 				yield return new WaitForSeconds(0.0166f);
