@@ -53,8 +53,9 @@ namespace Game
 		int render;
 		#endregion
 
-		public GasFlowGpu(Vector3Int resolution)
+		public GasFlowGpu(Vector3Int resolution, ComputeShader shader)
 		{
+			this.shader = shader;
 			Resolution = new Vector3Int(resolution.x, resolution.y, resolution.z);
 			threadGroups = Resolution.x / numXYThreads;
 
@@ -162,7 +163,6 @@ namespace Game
 		void SetupShaders(Vector3Int resolution)
 		{
 			// shader
-			shader = Resources.Load<ComputeShader>("gas");
 
 			// globals
 			{

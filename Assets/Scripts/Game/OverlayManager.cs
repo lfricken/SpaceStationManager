@@ -20,7 +20,7 @@ namespace Game
 
 		OverlayManager()
 		{
-			size = new Vector2Int(10,10);
+			size = new Vector2Int(20,20);
 			overlays = new List<Image>();
 		}
 
@@ -37,7 +37,7 @@ namespace Game
 				Image i = go.GetComponent<Image>();
 				i.canvas.pixelPerfect = true;
 				overlays.Add(i);
-				i.material.mainTexture = gfm.gas.RenderTextures[num];
+				i.material.mainTexture = gfm.GasWorlds[gfm.GasWorlds.Count-1].RenderTextures[num];
 				i.color = new Color(1, 1, 1, 0.5f);
 
 				RectTransform t = go.GetComponent<RectTransform>();

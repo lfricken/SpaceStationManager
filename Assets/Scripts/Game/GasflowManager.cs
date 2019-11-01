@@ -1,11 +1,12 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game
 {
 	public class GasflowManager : SingletonMonoBehavior<GasflowManager>
 	{
-		public GasFlowGpu gas;
+		public List<GasFlowGpu> GasWorlds;
 
 		public Vector3Int Resolution
 		{
@@ -15,10 +16,17 @@ namespace Game
 
 		private void Start()
 		{
-			Resolution = new Vector3Int(256, 256, 32);
-			gas = new GasFlowGpu(Resolution);
-			gas.AddRemoveMass.AddDelta(new Vector2Int(100, 100), 10);
-			gas.AddRemoveMass.SendUpdatesToGpu();
+			GasWorlds = new List<GasFlowGpu>();
+
+			for (int i = 0; i < 1; ++i)
+			{
+				Resolution = new Vector3Int(256, 256, 32);
+				ComputeShader shader = Instantiate(Resources.Load<ComputeShader>("gas"));
+				var gas = new GasFlowGpu(Resolution, shader);
+				gas.AddRemoveMass.AddDelta(new Vector2Int(100, 100), 10);
+				gas.AddRemoveMass.SendUpdatesToGpu();
+				GasWorlds.Add(gas);
+			}
 			StartCoroutine(Tick());
 		}
 
@@ -29,17 +37,32 @@ namespace Game
 
 		private void OnDestroy()
 		{
-			gas.Dispose();
+			foreach (var gas in GasWorlds)
+			{
+				gas.Dispose();
+			}
 		}
 
 		IEnumerator Tick()
 		{
+			int simsPerTick = 5;
+			int i = 0;
+			int nextGoal = simsPerTick;
+			int mod = GasWorlds.Count;
+
+
+			Debug.Assert(mod > simsPerTick);
 			//gas.Init();
-			for (int i = 0; i < 10000; i++)
+			while (true)
 			{
-				yield return new WaitForSeconds(0.0166f);
-				//for (int n = 0; n < 5; n++)
-				gas.Tick();
+				while (i != nextGoal)
+				{
+					var gas = GasWorlds[i];
+					gas.Tick();
+					i = (i + 1)% mod;
+				}
+				nextGoal = (i + simsPerTick) % mod;
+				yield return new WaitForSeconds(0f);
 			}
 		}
 	}
