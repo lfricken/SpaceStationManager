@@ -31,23 +31,6 @@
 // gas only
 // compute deltas: 
 
-void delta(a, b, dA, dB)
-{
-	float max = 0.25;
-	float min = 0.05;
-	float min = 0.01;
-
-	float total = a + b;
-	aP = a / total;
-	bP = b / total;
-
-	float diff = (bP - aP)/100.0f;// [1, -1];
-
-	if(diff > 0)
-	dA = aP * 
-}
-
-
 void graph(float diff, out float dA, out float dB)
 {
 	float aIn = 0.25f * (diff - 1);
@@ -56,6 +39,21 @@ void graph(float diff, out float dA, out float dB)
 	dA = aIn * aIn * aIn * aIn * 4;
 	dB = bIn * bIn * bIn * bIn * 4;
 }
+
+void findDelta(float a, float b, out float dA, out float dB)
+{
+	float total = a + b;
+	float aP = a / total;
+	float bP = b / total;
+
+	float diff = (bP - aP);// [1, -1];
+
+	graph(diff, dA, dB);
+	dA *= a;
+	dB *= b;
+}
+
+
 
 // equal percentages are assumed
 

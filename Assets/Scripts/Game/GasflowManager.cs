@@ -50,7 +50,7 @@ namespace Game
 			int i = 0;
 
 
-			Debug.Assert(mod > simsPerTick);
+			Debug.Assert(mod >= simsPerTick);
 			//gas.Init();
 			while (true)
 			{
