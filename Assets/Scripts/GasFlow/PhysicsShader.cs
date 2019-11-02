@@ -3,21 +3,43 @@ using UnityEngine;
 
 namespace Game
 {
-	public struct Delta
+	public class PhysicsShader
 	{
-		public double r;
-		public double d;
-		public double l;
-		public double u;
-	}
+		public struct Deltas
+		{
+			public double r;
+			public double d;
+			public double l;
+			public double u;
+		}
 
-	public class GasFlowGpu
-	{
+		public static void FindDelta(float a, float b, out float dA, out float dB)
+		{
+			float total = a + b;
+			float aP = a / total;
+			float bP = b / total;
+
+			float diff = (bP - aP);// [1, -1];
+
+			Graph(diff, out dA, out dB);
+			dA *= a;
+			dB *= b;
+		}
+
+		public static void Graph(float diff, out float dA, out float dB)
+		{
+			float aIn = 0.25f * (diff - 1);
+			float bIn = 0.25f * (diff + 1);
+
+			dA = aIn * aIn * aIn * aIn * 4;
+			dB = bIn * bIn * bIn * bIn * 4;
+		}
+
 		public Vector3Int Resolution;
 
 		#region GPU
-		DataBuffer<Delta> Delta2;
-		DataBuffer<Delta> Delta;
+		DataBuffer<Deltas> Delta2;
+		DataBuffer<Deltas> Delta;
 
 		DataBuffer<double> Mass;
 		public DataBuffer<double> AddRemoveMass;
@@ -53,13 +75,8 @@ namespace Game
 		int render;
 		#endregion
 
-		public GasFlowGpu(Vector3Int resolution, ComputeShader shader)
+		public PhysicsShader(Vector3Int resolution, ComputeShader shader)
 		{
-			float x = 0;
-			float y = 5;
-			PhysicsShader.FindDelta(x, y, out float a, out float b);
-
-
 			this.shader = shader;
 			Resolution = new Vector3Int(resolution.x, resolution.y, resolution.z);
 			threadGroups = Resolution.x / numXYThreads;
@@ -117,8 +134,8 @@ namespace Game
 		{
 			ResolutionX = resolution.x;
 
-			Delta2 = new DataBuffer<Delta>(nameof(Delta2), resolution);
-			Delta = new DataBuffer<Delta>(nameof(Delta), resolution);
+			Delta2 = new DataBuffer<Deltas>(nameof(Delta2), resolution);
+			Delta = new DataBuffer<Deltas>(nameof(Delta), resolution);
 
 			Mass = new DataBuffer<double>(nameof(Mass), resolution);
 			AddRemoveMass = new DataBuffer<double>(nameof(AddRemoveMass), resolution);

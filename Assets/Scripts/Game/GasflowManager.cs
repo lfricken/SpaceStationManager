@@ -45,23 +45,23 @@ namespace Game
 
 		IEnumerator Tick()
 		{
-			int simsPerTick = 5;
-			int i = 0;
-			int nextGoal = simsPerTick;
 			int mod = GasWorlds.Count;
+			int simsPerTick = 1;
+			int i = 0;
 
 
 			Debug.Assert(mod > simsPerTick);
 			//gas.Init();
 			while (true)
 			{
-				while (i != nextGoal)
+				int nextGoal = (i + simsPerTick) % mod;
+				do
 				{
 					var gas = GasWorlds[i];
 					gas.Tick();
-					i = (i + 1)% mod;
-				}
-				nextGoal = (i + simsPerTick) % mod;
+					i = (i + 1) % mod;
+				} while (i != nextGoal);
+
 				yield return new WaitForSeconds(0f);
 			}
 		}
