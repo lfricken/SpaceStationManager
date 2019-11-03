@@ -7,16 +7,17 @@
 ////// Textures
 
 //// Gas (heat cap and conductivity calculated based on masses)
+// Temperature
 // O2
 // CO2
 // CO
 // Methane
-// Temperature
 
-//// Building
-// HeatCap
+//// Heat Texture
 // Temperature
+// HeatCap
 // Conductivity
+// Mass
 
 
 
@@ -29,8 +30,45 @@
 
 //// gas transfer
 // gas only
-// compute deltas: 
+// compute deltas: 2 textures, 2 floats per pixel
 
+
+
+
+//// heat
+// each pairwise tile, calculate the heat transfer between them and write to 
+
+// temp
+struct HotMass
+{
+	float Energy;
+	float HeatCapacity;
+	float Conduct;
+	float Mass;
+};
+float geoMean(float a, float b)
+{
+	return sqrt(a * b);
+}
+float deltaQ(HotMass a, HotMass b)
+{
+	float k = geoMean(a.Cond, b.Cond);
+	float dTemp = b.Temp - a.Temp;
+	float dT = 0.1;
+	return k * dTemp * dT;
+}
+bool newTemps(float dQ, HotMass a, HotMass b)
+{
+
+}
+
+float findDelta(HotMass a, HotMass b)
+{
+	dQ = deltaQ(a, b);
+
+}
+
+// gas
 void graph(float diff, out float dA, out float dB)
 {
 	float aIn = 0.25f * (diff - 1);
@@ -39,7 +77,6 @@ void graph(float diff, out float dA, out float dB)
 	dA = aIn * aIn * aIn * aIn * 4;
 	dB = bIn * bIn * bIn * bIn * 4;
 }
-
 void findDelta(float a, float b, out float dA, out float dB)
 {
 	float total = a + b;
@@ -54,7 +91,6 @@ void findDelta(float a, float b, out float dA, out float dB)
 }
 
 
-
 // equal percentages are assumed
 
 
@@ -67,23 +103,6 @@ void findDelta(float a, float b, out float dA, out float dB)
 
 
 
-
-
-//// seperate textures
-// is blocked
-// gas momentum deltas
-
-struct Tile
-{
-	float O2;
-	float CO2;
-	float CO;
-	float Methane;
-	float Blocked;
-	float HeatCap;
-	float HeatTrans;
-	float Temp;
-};
 
 
 typedef RWStructuredBuffer<double4> ArrayDelta;

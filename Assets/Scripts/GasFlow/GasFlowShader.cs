@@ -55,11 +55,6 @@ namespace Game
 
 		public GasFlowGpu(Vector3Int resolution, ComputeShader shader)
 		{
-			float x = 0;
-			float y = 5;
-			PhysicsShader.FindDelta(x, y, out float a, out float b);
-
-
 			this.shader = shader;
 			Resolution = new Vector3Int(resolution.x, resolution.y, resolution.z);
 			threadGroups = Resolution.x / numXYThreads;

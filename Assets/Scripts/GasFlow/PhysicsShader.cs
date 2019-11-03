@@ -1,10 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game
 {
 	public class PhysicsShader
 	{
+		public static float clamp(float value, float min, float max)
+		{
+			return (value < min) ? min : (value > max) ? max : value;
+		}
+		public static float abs(float value)
+		{
+			return Math.Abs(value);
+		}
+
 		public struct Deltas
 		{
 			public double r;
@@ -12,21 +22,79 @@ namespace Game
 			public double l;
 			public double u;
 		}
-
-		public static void FindDelta(float a, float b, out float dA, out float dB)
+		public struct HotMass
 		{
-			float total = a + b;
-			float aP = a / total;
-			float bP = b / total;
+			public HotMass(float e, float cap, float conduct, float m)
+			{
+				Energy = e;
+				HeatCapacity = cap;
+				Conduct = conduct;
+				Mass = m;
+			}
 
-			float diff = (bP - aP);// [1, -1];
+			public float Energy;
+			public float HeatCapacity;
+			public float Conduct;
+			public float Mass;
+		};
 
-			Graph(diff, out dA, out dB);
-			dA *= a;
-			dB *= b;
+		public static float getTemp(HotMass a)
+		{
+			// e = m * c * t
+			return a.Energy / (a.Mass * a.HeatCapacity);
 		}
 
-		public static void Graph(float diff, out float dA, out float dB)
+		// assume b is hotter and possitive flow is to a
+		public static float sqrt(float value)
+		{
+			return Mathf.Sqrt(value);
+		}
+		public static float deltaQ(HotMass a, HotMass b, float tA, float tB)
+		{
+			// geometric mean
+			float k = sqrt(a.Conduct * b.Conduct);
+			float dTemp = tB - tA;
+			float dT = 0.1f;
+			return k * dTemp * dT;
+		}
+		public static float findMaxedDeltaQ(HotMass a, HotMass b, float tA, float tB)
+		{
+			float maxDeltaTemp = abs(tB - tA) / 5f;
+
+			bool aHasLessHeatCap = b.Mass * b.HeatCapacity > a.Mass * a.HeatCapacity;
+			if (aHasLessHeatCap)
+			{
+				return a.Mass * a.HeatCapacity * maxDeltaTemp;
+			}
+			else
+			{
+				return b.Mass * b.HeatCapacity * maxDeltaTemp;
+			}
+
+			// e = m * c * t
+		}
+		public static float finalDeltaQ(HotMass a, HotMass b)
+		{
+			if (a.Mass <= 0 || b.Mass <= 0 || a.HeatCapacity <= 0 || b.HeatCapacity <= 0)
+			{
+				return 0;
+			}
+
+			float tempA = getTemp(a);
+			float tempB = getTemp(b);
+
+			float deltaEnergy = deltaQ(a, b, tempA, tempB);
+			if (abs(deltaEnergy) < 0.00001)
+			{
+				return 0;
+			}
+
+			float maxDeltaEnergy = findMaxedDeltaQ(a, b, tempA, tempB);
+			float final = clamp(deltaEnergy, -maxDeltaEnergy, maxDeltaEnergy);
+			return final;
+		}
+
+		public static void graph(float diff, out float dA, out float dB)
 		{
 			float aIn = 0.25f * (diff - 1);
 			float bIn = 0.25f * (diff + 1);
@@ -34,6 +102,19 @@ namespace Game
 			dA = aIn * aIn * aIn * aIn * 4;
 			dB = bIn * bIn * bIn * bIn * 4;
 		}
+		public static void findDelta(float a, float b, out float dA, out float dB)
+		{
+			float total = a + b;
+			float aP = a / total;
+			float bP = b / total;
+
+			float diff = (bP - aP);// [1, -1];
+
+			graph(diff, out dA, out dB);
+			dA *= a;
+			dB *= b;
+		}
+
 
 		public Vector3Int Resolution;
 
