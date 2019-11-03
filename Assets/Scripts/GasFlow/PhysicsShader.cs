@@ -59,7 +59,7 @@ namespace Game
 		}
 		public static float findMaxedDeltaQ(HotMass a, HotMass b, float tA, float tB)
 		{
-			float maxDeltaTemp = abs(tB - tA) / 5f;
+			float maxDeltaTemp = abs(tB - tA) / 5.1f; // (5 tiles, NOT 4!), 5.1 to be extra safe about entropy reversal)
 
 			bool aHasLessHeatCap = b.Mass * b.HeatCapacity > a.Mass * a.HeatCapacity;
 			if (aHasLessHeatCap)

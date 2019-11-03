@@ -8,10 +8,12 @@ namespace PhysicsTests
 	[TestClass]
 	public class FinalDeltaQTest
 	{
+		static int steps = 10000;
+
 		#region Equilibrium
 
 		[TestMethod]
-		public void Equilibrium_EqualBodies_ZeroQ()
+		public void Equilibrium_ZeroQ_EqualBodies()
 		{
 			HotMass a = new HotMass(100, 1, 1, 1);
 			HotMass b = new HotMass(100, 1, 1, 1);
@@ -20,20 +22,198 @@ namespace PhysicsTests
 		}
 
 		[TestMethod]
-		public void Equilibrium_EnergyDelta_TwoTiles_NeverIncreases()
+		public void Equilibrium_ApproachesZero_EnergyDelta()
 		{
 			HotMass a = new HotMass(100, 1, 1, 1);
 			HotMass b = new HotMass(200, 1, 1, 1);
 
-			int numTests = 500;
 			float lastDeltaQ = float.MaxValue;
-			for (int i = 0; i < numTests; ++i)
+			for (int i = 0; i < steps; ++i)
 			{
 				float dQ = finalDeltaQ(a, b);
-				Assert.IsTrue(dQ <= lastDeltaQ, $"EnergyDelta increased! {nameof(lastDeltaQ)}: {lastDeltaQ}, {nameof(dQ)}: {dQ}");
+				Assert.IsTrue(dQ <= lastDeltaQ, $"EnergyDelta increased! step:{i} {nameof(lastDeltaQ)}: {lastDeltaQ}, {nameof(dQ)}: {dQ}");
 				lastDeltaQ = dQ;
 				a.Energy += dQ;
 				b.Energy -= dQ;
+			}
+		}
+
+		[TestMethod]
+		public void Equilibrium_ApproachesZero_EnergyDeltaLarge()
+		{
+			HotMass a = new HotMass(1, 1, 1, 1);
+			HotMass b = new HotMass(10000f * 10000f * 10000f, 10000, 10000, 10000);
+
+			float lastDeltaQ = float.MaxValue;
+			for (int i = 0; i < steps; ++i)
+			{
+				float dQ = finalDeltaQ(a, b);
+				Assert.IsTrue(dQ <= lastDeltaQ, $"EnergyDelta increased! step:{i} {nameof(lastDeltaQ)}: {lastDeltaQ}, {nameof(dQ)}: {dQ}");
+				lastDeltaQ = dQ;
+				a.Energy += dQ;
+				b.Energy -= dQ;
+			}
+		}
+
+		[TestMethod]
+		public void Equilibrium_EntropyNotViolated_Temperature()
+		{
+			HotMass a = new HotMass(100, 1, 1, 1);
+			HotMass b = new HotMass(200, 1, 1, 1);
+
+			for (int i = 0; i < steps; ++i)
+			{
+				float dQ = finalDeltaQ(a, b);
+				a.Energy += dQ;
+				b.Energy -= dQ;
+				Assert.IsTrue(getTemp(a) < getTemp(b), $"step:{ i}");
+			}
+		}
+
+		[TestMethod]
+		public void Equilibrium_EntropyNotViolated_TemperatureLarge()
+		{
+			HotMass a = new HotMass(1, 1, 1, 1);
+			HotMass b = new HotMass(0, 10000, 10000, 10000);
+			float bTemp = 10000;
+			b.Energy = bTemp * b.HeatCapacity * b.Mass;
+
+			for (int i = 0; i < steps; ++i)
+			{
+				float dQ = finalDeltaQ(a, b);
+				a.Energy += dQ;
+				b.Energy -= dQ;
+				Assert.IsTrue(getTemp(a) < getTemp(b), $"step:{ i}");
+			}
+		}
+
+		[TestMethod]
+		public void Equilibrium_MultiTest_FiveCell()
+		{
+			HotMass[] cells = new HotMass[4];
+			cells[0] = new HotMass(0, 1, 1, 1);
+			cells[1] = new HotMass(0, 1, 1, 1);
+			cells[2] = new HotMass(0, 1, 1, 1);
+			cells[3] = new HotMass(0, 1, 1, 1);
+
+			HotMass centerCell = new HotMass(100, 1, 1, 1);
+
+			float dQCenter = 0;
+
+			for (int i = 0; i < steps; i++)
+			{
+				for (int c = 0; c < cells.Length; c++)
+				{
+					float dQ = finalDeltaQ(cells[c], centerCell);
+					cells[c].Energy += dQ;
+					dQCenter -= dQ; // 
+				}
+				centerCell.Energy += dQCenter; // add because we use negative above
+				dQCenter = 0;
+
+				for (int c = 0; c < cells.Length; c++)
+				{
+					float tempC = getTemp(cells[c]);
+					float tempCenterCell = getTemp(centerCell);
+
+					Assert.IsTrue((int)tempC <= (int)tempCenterCell, $"Temperatures: step:{i} {tempC}, {tempCenterCell}"); // temperature
+				}
+			}
+		}
+
+		[TestMethod]
+		public void Equilibrium_MultiTestLargeConduct_FiveCell()
+		{
+			HotMass[] cells = new HotMass[4];
+			cells[0] = new HotMass(0, 1, 1, 1);
+			cells[1] = new HotMass(0, 1, 100, 1);
+			cells[2] = new HotMass(0, 1, 1, 1);
+			cells[3] = new HotMass(0, 1, 1, 1);
+
+			HotMass centerCell = new HotMass(100, 1, 100, 1);
+
+			float dQCenter = 0;
+
+			for (int i = 0; i < steps; i++)
+			{
+				for (int c = 0; c < cells.Length; c++)
+				{
+					float dQ = finalDeltaQ(cells[c], centerCell);
+					cells[c].Energy += dQ;
+					dQCenter -= dQ; // 
+				}
+				centerCell.Energy += dQCenter; // add because we use negative above
+				dQCenter = 0;
+
+				for (int c = 0; c < cells.Length; c++)
+				{
+					float tempC = getTemp(cells[c]);
+					float tempCenterCell = getTemp(centerCell);
+
+					Assert.IsTrue((int)tempC <= (int)tempCenterCell, $"Temperatures: step:{i} {tempC}, {tempCenterCell}"); // temperature
+				}
+			}
+		}
+
+		[TestMethod]
+		public void Equilibrium_MultiTestLargeHeatCap_FiveCell()
+		{
+			HotMass[] cells = new HotMass[4];
+			cells[0] = new HotMass(0, 100, 1, 1);
+			cells[1] = new HotMass(0, 1, 1, 1);
+			cells[2] = new HotMass(0, 1, 1, 1);
+			cells[3] = new HotMass(0, 1, 1, 1);
+
+			HotMass centerCell = new HotMass(100000, 1000, 1, 1);
+
+			float dQCenter = 0;
+
+			for (int i = 0; i < steps; i++)
+			{
+				for (int c = 0; c < cells.Length; c++)
+				{
+					float dQ = finalDeltaQ(cells[c], centerCell);
+					cells[c].Energy += dQ;
+					dQCenter -= dQ; // 
+				}
+				centerCell.Energy += dQCenter; // add because we use negative above
+				dQCenter = 0;
+
+				float tempC = getTemp(cells[0]);
+				float tempCenterCell = getTemp(centerCell);
+
+				Assert.IsTrue(Math.Round(tempC) <= Math.Round(tempCenterCell), $"Temperatures: step:{i} {tempC}, {tempCenterCell}"); // temperature
+			}
+		}
+
+		[TestMethod]
+		public void Equilibrium_MultiTestLargeMass_FiveCell()
+		{
+			HotMass[] cells = new HotMass[4];
+			cells[0] = new HotMass(0, 1, 1, 100);
+			cells[1] = new HotMass(0, 1, 1, 1);
+			cells[2] = new HotMass(0, 1, 1, 1);
+			cells[3] = new HotMass(0, 1, 1, 1);
+
+			HotMass centerCell = new HotMass(100000, 1, 1, 100);
+
+			float dQCenter = 0;
+
+			for (int i = 0; i < steps; i++)
+			{
+				for (int c = 0; c < cells.Length; c++)
+				{
+					float dQ = finalDeltaQ(cells[c], centerCell);
+					cells[c].Energy += dQ;
+					dQCenter -= dQ; // 
+				}
+				centerCell.Energy += dQCenter; // add because we use negative above
+				dQCenter = 0;
+
+				float tempC = getTemp(cells[0]);
+				float tempCenterCell = getTemp(centerCell);
+
+				Assert.IsTrue(Math.Round(tempC) <= Math.Round(tempCenterCell), $"Temperatures: step:{i} {tempC}, {tempCenterCell}"); // temperature
 			}
 		}
 		#endregion
@@ -45,7 +225,7 @@ namespace PhysicsTests
 			HotMass a = new HotMass(1, 1, 1, 1);
 			HotMass b = new HotMass(2, 1, 1, 1);
 			float dQ = finalDeltaQ(a, b);
-			Assert.IsTrue(dQ > 0, "Positive energy should imply energy is flowing right to left.");
+			Assert.IsTrue(dQ > 0);
 		}
 		[TestMethod]
 		public void Energy_LeftHotter_FlowRight()
@@ -53,7 +233,23 @@ namespace PhysicsTests
 			HotMass a = new HotMass(2, 1, 1, 1);
 			HotMass b = new HotMass(1, 1, 1, 1);
 			float dQ = finalDeltaQ(a, b);
-			Assert.IsTrue(dQ < 0, "Negative energy should imply energy is flowing left to right.");
+			Assert.IsTrue(dQ < 0);
+		}
+		[TestMethod]
+		public void Energy_ZeroEnergy_LeftCell_FlowLeft()
+		{
+			HotMass a = new HotMass(0, 1, 1, 1);
+			HotMass b = new HotMass(2, 1, 1, 1);
+			float dQ = finalDeltaQ(a, b);
+			Assert.IsTrue(dQ > 0);
+		}
+		[TestMethod]
+		public void Energy_ZeroEnergy_RightCell_FlowRight()
+		{
+			HotMass a = new HotMass(2, 1, 1, 1);
+			HotMass b = new HotMass(0, 1, 1, 1);
+			float dQ = finalDeltaQ(a, b);
+			Assert.IsTrue(dQ < 0);
 		}
 		#endregion
 
