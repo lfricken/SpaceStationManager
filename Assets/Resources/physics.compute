@@ -7,18 +7,11 @@
 ////// Textures
 
 //// Gas (heat cap and conductivity calculated based on masses)
-// Temperature
+// Energy
 // O2
 // CO2
 // CO
 // Methane
-
-//// Heat Texture
-// Temperature
-// HeatCap
-// Conductivity
-// Mass
-
 
 
 //// heat transfer

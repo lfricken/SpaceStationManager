@@ -6,6 +6,7 @@ namespace Game
 {
 	public class PhysicsShader
 	{
+		#region C# Only
 		public static float clamp(float value, float min, float max)
 		{
 			return (value < min) ? min : (value > max) ? max : value;
@@ -14,14 +15,17 @@ namespace Game
 		{
 			return Math.Abs(value);
 		}
-
-		public struct Deltas
+		public static float sqrt(float value)
 		{
-			public double r;
-			public double d;
-			public double l;
-			public double u;
+			return Mathf.Sqrt(value);
 		}
+		#endregion
+
+		#region Shader Code Duplicate
+
+		#region Data Structs
+		//typedef float[] Gas;
+
 		public struct HotMass
 		{
 			public HotMass(float e, float cap, float conduct, float m)
@@ -37,7 +41,15 @@ namespace Game
 			public float Conduct;
 			public float Mass;
 		};
+		#endregion
 
+		#region Heat
+		// OVERVIEW
+		// heat computes deltas into the 2 deltas textures
+		// after computing it, applies it to each cell
+		// 2(render steps)
+
+		// find temperature for this body
 		public static float getTemp(HotMass a)
 		{
 			// e = m * c * t
@@ -45,36 +57,38 @@ namespace Game
 		}
 
 		// assume b is hotter and possitive flow is to a
-		public static float sqrt(float value)
+		public static float deltaQFromTemp(HotMass a, HotMass b, float tA, float tB)
 		{
-			return Mathf.Sqrt(value);
-		}
-		public static float deltaQ(HotMass a, HotMass b, float tA, float tB)
-		{
-			// geometric mean
-			float k = sqrt(a.Conduct * b.Conduct);
+			float netConductivity = sqrt(a.Conduct * b.Conduct); // geometric mean
 			float dTemp = tB - tA;
-			float dT = 0.1f;
-			return k * dTemp * dT;
+			float dTime = 0.1f;
+			return netConductivity * dTemp * dTime;
 		}
+
+		// cap heat flow to avoid all energy leaving this tile, or one tile getting too hot
 		public static float findMaxedDeltaQ(HotMass a, HotMass b, float tA, float tB)
 		{
+			// cap heat flow to avoid all energy leaving this tile!
 			float maxDeltaTemp = abs(tB - tA) / 5.1f; // (5 tiles, NOT 4!), 5.1 to be extra safe about entropy reversal)
 
-			bool aHasLessHeatCap = b.Mass * b.HeatCapacity > a.Mass * a.HeatCapacity;
+			// careful not to have more than 20% of difference in temperature fluctuate
+			float aTH = a.Mass * a.HeatCapacity;
+			float bTH = b.Mass * b.HeatCapacity;
+			bool aHasLessHeatCap = bTH > aTH;
 			if (aHasLessHeatCap)
 			{
-				return a.Mass * a.HeatCapacity * maxDeltaTemp;
+				return aTH * maxDeltaTemp;
 			}
 			else
 			{
-				return b.Mass * b.HeatCapacity * maxDeltaTemp;
+				return bTH * maxDeltaTemp;
 			}
-
-			// e = m * c * t
 		}
+
+		// find total heat energy exchange [-Inf, +Inf]
 		public static float finalDeltaQ(HotMass a, HotMass b)
 		{
+			// these tiles could never transmit heat
 			if (a.Mass <= 0 || b.Mass <= 0 || a.HeatCapacity <= 0 || b.HeatCapacity <= 0)
 			{
 				return 0;
@@ -83,44 +97,81 @@ namespace Game
 			float tempA = getTemp(a);
 			float tempB = getTemp(b);
 
-			float deltaEnergy = deltaQ(a, b, tempA, tempB);
+			float deltaEnergy = deltaQFromTemp(a, b, tempA, tempB);
+			// avoid strange fluctuations and entropy breaking
 			if (abs(deltaEnergy) < 0.00001)
 			{
 				return 0;
 			}
 
 			float maxDeltaEnergy = findMaxedDeltaQ(a, b, tempA, tempB);
+
+			// avoid energy swinging too much
 			float final = clamp(deltaEnergy, -maxDeltaEnergy, maxDeltaEnergy);
 			return final;
 		}
+		#endregion
 
-		public static void graph(float diff, out float dA, out float dB)
+		#region Gas
+		// OVERVIEW
+		// gas computes mass and energy deltas
+		// applies mass and energy deltas
+
+		public static int NumGasses = 2;
+
+		public static float getTotalMass(float[] gasses, int tile)
 		{
-			float aIn = 0.25f * (diff - 1);
-			float bIn = 0.25f * (diff + 1);
+			float mass = 0;
+			for(int i = 0; i<NumGasses; ++i)
+			{
+				mass += gasses[tile + i];
+			}
+			return mass;
+		}
+
+		// equation computed at https://www.desmos.com/calculator and wolfram
+		// y=(0.235(x+1))^{4}*4+(0.235(x-1))^{4}*4 
+		// [-1,0,1] -> dA:[0.195, 0.012, 0] dB:[reversed]
+		// diff is a measure of mass held as percentage.
+		// dA,dB are percentages
+		public static void computeGasFlows(float diff, out float dA, out float dB)
+		{
+			float aIn = 0.235f * (diff - 1);
+			float bIn = 0.235f * (diff + 1);
 
 			dA = aIn * aIn * aIn * aIn * 4;
 			dB = bIn * bIn * bIn * bIn * 4;
 		}
-		public static void findDelta(float a, float b, out float dA, out float dB)
+
+		// a and b masses, dA and dB delta percentages
+		public static void findGasDelta(float aMass, float bMass, out float dPercA, out float dPercB)
 		{
-			float total = a + b;
-			float aP = a / total;
-			float bP = b / total;
+			float total = aMass + bMass;
+
+			// percentages of each gas of total between the two
+			float aP = aMass / total;
+			float bP = bMass / total;
 
 			float diff = (bP - aP);// [1, -1];
 
-			graph(diff, out dA, out dB);
-			dA *= a;
-			dB *= b;
+			computeGasFlows(diff, out dPercA, out dPercB);
 		}
+
+		public static void finalGasAndEnergyDeltas(float[] gasTile, float[] )
+		{
+			// find percentages
+
+			// get gas masses for each
+			// get gas energy for each
+		}
+		#endregion
+
+		#endregion
 
 
 		public Vector3Int Resolution;
 
 		#region GPU
-		DataBuffer<Deltas> Delta2;
-		DataBuffer<Deltas> Delta;
 
 		DataBuffer<double> Mass;
 		public DataBuffer<double> AddRemoveMass;
@@ -201,8 +252,6 @@ namespace Game
 
 		void SendAll(int handle)
 		{
-			Delta2.SendTo(handle, shader);
-			Delta.SendTo(handle, shader);
 
 			Mass.SendTo(handle, shader);
 			AddRemoveMass.SendTo(handle, shader);
@@ -215,8 +264,6 @@ namespace Game
 		{
 			ResolutionX = resolution.x;
 
-			Delta2 = new DataBuffer<Deltas>(nameof(Delta2), resolution);
-			Delta = new DataBuffer<Deltas>(nameof(Delta), resolution);
 
 			Mass = new DataBuffer<double>(nameof(Mass), resolution);
 			AddRemoveMass = new DataBuffer<double>(nameof(AddRemoveMass), resolution);
