@@ -57,7 +57,7 @@ static int2 Offsets[4] =
 	+int2(1, 0), // right
 	-int2(0, 1), // down
 	-int2(1, 0), // left
-	+int2(0, 1)  // up
+	+int2(0, 1)  // ups
 };
 /////////////
 
@@ -139,6 +139,16 @@ float4 colorGradient(float value, float min, float max)
 	return color;
 }
 
+struct pixelSamples
+{
+	float pixelSampleArray[32];
+};
+void test(int ray[2])
+{
+
+	ray[0] = 1;
+}
+
 //////////////
 /// render ///
 //////////////
@@ -150,6 +160,13 @@ void render(uint3 pix : SV_DispatchThreadID)
 	double p = Mass[at(pos)];
 	bool isBlocked = IsBlocked[at(pos)];
 
+	int2 Offsets[] =
+	{
+		+int2(1, 0), // right
+		-int2(0, 1), // down
+		-int2(1, 0), // left
+		+int2(0, 1)  // ups
+	};
 
 	// fake map
 	int2 readPos = int2(pix.x, 1);

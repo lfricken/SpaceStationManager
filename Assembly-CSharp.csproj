@@ -10,8 +10,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <RootNamespace>
-    </RootNamespace>
+    <RootNamespace></RootNamespace>
     <ProjectGuid>{3D65A02C-BDED-547B-B2EF-E5C7894B1847}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -87,7 +86,6 @@
     <Compile Include="Assets\Scripts\UnityEditor\LevelBrush.cs" />
     <Compile Include="Assets\Scripts\UnityEditor\LevelBrushEditor.cs" />
     <Compile Include="Assets\Scripts\UnityEditor\MenuItemBuilder.cs" />
-    <Compile Include="GlobalSuppressions.cs" />
     <None Include="Assets\Resources\particle.compute" />
     <None Include="Assets\Resources\gas.compute" />
     <None Include="Assets\Resources\physics.compute" />

@@ -24,7 +24,9 @@ namespace Game
 		#region Shader Code Duplicate
 
 		#region Data Structs
-		//typedef float[] Gas;
+		//typedef float[] GasMass;
+		// Oxygen
+		// CO2
 
 		public struct HotMass
 		{
@@ -41,9 +43,21 @@ namespace Game
 			public float Conduct;
 			public float Mass;
 		};
+		// delta between two tiles
+		public struct HotDelta
+		{
+			public float hor;
+			public float vert;
+		}
 		#endregion
 
 		#region Heat
+
+		public static float getEnergy(HotMass[] masses, int tile)
+		{
+			return masses[tile].Energy;
+		}
+
 		// OVERVIEW
 		// heat computes deltas into the 2 deltas textures
 		// after computing it, applies it to each cell
@@ -117,23 +131,103 @@ namespace Game
 		// gas computes mass and energy deltas
 		// applies mass and energy deltas
 
-		public static int NumGasses = 2;
+		public struct GasMass
+		{
+			public GasMass(int i)
+			{
+				Masses = new float[NumGasses];
+			}
+			public GasMass(float[] masses)
+			{
+				Masses = new float[NumGasses];
+				for (int i = 0; i < masses.Length; ++i)
+				{
+					Masses[i] = masses[i];
+				}
+			}
+			public float[] Masses;
+		};
+		// deltas for one tile (0 is FROM left, 1 is FROM right)
+		public struct GasTileDelta
+		{
+			public GasMass fromLeft;
+			public GasMass fromRight;
+		}
+		// delta between two tiles (0 is vertical, 1 is horizontal)
+		public struct GasDelta
+		{
+			public GasTileDelta vert;
+			public GasTileDelta hor;
+		}
 
-		public static float getTotalMass(float[] gasses, int tile)
+		public const int NumGasses = 2;
+		public static int DimensionX = 256;
+		public static int DimensionY = 128;
+
+
+		// mass for 1 gas
+		public static float getGasMass(GasMass gas, int gasType)
+		{
+			return gas.Masses[gasType];
+		}
+
+		// mass for all gasses
+		public static float getTotalMass(GasMass gas)
 		{
 			float mass = 0;
-			for(int i = 0; i<NumGasses; ++i)
+			for (int i = 0; i < NumGasses; ++i)
 			{
-				mass += gasses[tile + i];
+				mass += getGasMass(gas, i);
 			}
 			return mass;
+		}
+
+		public static GasMass mul(GasMass a, float scalar)
+		{
+			GasMass c = new GasMass(1);
+			for (int i = 0; i < NumGasses; ++i)
+			{
+				c.Masses[i] = a.Masses[i] * scalar;
+			}
+			return c;
+		}
+		public static GasMass add(GasMass a, GasMass b)
+		{
+			GasMass c = new GasMass(1);
+			for (int i = 0; i < NumGasses; ++i)
+			{
+				c.Masses[i] = a.Masses[i] + b.Masses[i];
+			}
+			return c;
+		}
+		public static GasMass sub(GasMass a, GasMass b)
+		{
+			GasMass c = new GasMass(1);
+			for (int i = 0; i < NumGasses; ++i)
+			{
+				c.Masses[i] = a.Masses[i] - b.Masses[i];
+			}
+			return c;
+		}
+
+		public static int getHorTileFor(int deltaTile)
+		{
+			return deltaTile + 1;
+		}
+		public static int getVertTileFor(int deltaTile)
+		{
+			return deltaTile + DimensionX;
+		}
+		public static int getGasDeltaTile(int deltaTile, int isVertical)
+		{
+			return deltaTile * 2 + isVertical;
 		}
 
 		// equation computed at https://www.desmos.com/calculator and wolfram
 		// y=(0.235(x+1))^{4}*4+(0.235(x-1))^{4}*4 
 		// [-1,0,1] -> dA:[0.195, 0.012, 0] dB:[reversed]
 		// diff is a measure of mass held as percentage.
-		// dA,dB are percentages
+		// dA,dB are percentages of each that will be SENT
 		public static void computeGasFlows(float diff, out float dA, out float dB)
 		{
 			float aIn = 0.235f * (diff - 1);
@@ -143,8 +237,8 @@ namespace Game
 			dB = bIn * bIn * bIn * bIn * 4;
 		}
 
-		// a and b masses, dA and dB delta percentages
-		public static void findGasDelta(float aMass, float bMass, out float dPercA, out float dPercB)
+		// a and b masses, dA and dB delta percentages to be SENT
+		public static void findTotalGasDeltas(float aMass, float bMass, out float dPercA, out float dPercB)
 		{
 			float total = aMass + bMass;
 
@@ -157,12 +251,41 @@ namespace Game
 			computeGasFlows(diff, out dPercA, out dPercB);
 		}
 
-		public static void finalGasAndEnergyDeltas(float[] gasTile, float[] )
+		public static GasTileDelta finalGasDelta(GasMass a, GasMass b, float aH, float bH, out float energyDelta)
 		{
-			// find percentages
+			findTotalGasDeltas(getTotalMass(a), getTotalMass(b), out float aSent, out float bSent);
+			GasTileDelta t;
+			t.fromLeft = mul(a, aSent);
+			t.fromRight = mul(b, bSent);
 
-			// get gas masses for each
-			// get gas energy for each
+			energyDelta = (bH * bSent - aH * aSent);
+			return t;
+		}
+
+		// gasMassDeltas: [1,2] [2,3] ... [1,n +1] [2,n2]
+		public static void gasAndEnergyDeltas(GasMass[] gasTiles, HotMass[] energyTiles, int deltaTile, GasDelta[] gasMassDeltas, HotDelta[] gasEnergyDeltas)
+		{
+			int horTile = getHorTileFor(deltaTile);
+			int vertTile = getVertTileFor(deltaTile);
+
+			GasTileDelta hor = finalGasDelta(gasTiles[deltaTile], gasTiles[horTile], energyTiles[deltaTile].Energy, energyTiles[horTile].Energy, out float eHor);
+			GasTileDelta vert = finalGasDelta(gasTiles[deltaTile], gasTiles[vertTile], energyTiles[deltaTile].Energy, energyTiles[vertTile].Energy, out float eVert);
+
+			// new gas flow without conservation
+			gasMassDeltas[deltaTile].hor = hor;
+			gasMassDeltas[deltaTile].vert = vert;
+
+			gasEnergyDeltas[deltaTile].hor = eHor;
+			gasEnergyDeltas[deltaTile].vert = eVert;
+		}
+
+		public static void diffuseGasDeltas(GasDelta[] oldMassDeltas, int deltaTile, GasDelta[] newMassDeltas)
+		{
+			newMassDeltas[deltaTile].hor.fromLeft = oldMassDeltas[getHorTileFor(deltaTile)].hor.fromLeft;
+			newMassDeltas[deltaTile].hor.fromRight = oldMassDeltas[getHorTileFor(deltaTile)].hor.fromRight;
+
+			newMassDeltas[deltaTile].vert.fromLeft = oldMassDeltas[getVertTileFor(deltaTile)].vert.fromLeft;
+			newMassDeltas[deltaTile].vert.fromRight = oldMassDeltas[getVertTileFor(deltaTile)].vert.fromRight;
 		}
 		#endregion
 
