@@ -19,6 +19,56 @@ namespace Game
 		{
 			return Mathf.Sqrt(value);
 		}
+		public struct float2
+		{
+			public float x;
+			public float y;
+
+			public static float2 operator +(float2 a, float2 b)
+			{
+				float2 c;
+				c.x = a.x + b.x;
+				c.y = a.y + b.y;
+				return c;
+			}
+		}
+		public struct int2
+		{
+			public int2(int _x, int _y)
+			{
+				x = _x;
+				y = _y;
+			}
+			public int x;
+			public int y;
+
+			public static int2 operator +(int2 a, int2 b)
+			{
+				int2 c;
+				c.x = a.x + b.x;
+				c.y = a.y + b.y;
+				return c;
+			}
+
+			public static int2 operator *(int2 a, int b)
+			{
+				int2 c;
+				c.x = a.x * b;
+				c.y = a.y * b;
+				return c;
+			}
+		}
+		static int2[] Offsets = new int2[]
+		{
+			new int2(1, 0), // right
+			new int2(0, -1), // down
+			new int2(-1, 0), // left
+			new int2(0, 1),  // ups
+		};
+		static uint switch_side(uint side)
+		{
+			return (side + (NumSides / 2)) % NumSides;
+		}
 		#endregion
 
 		#region Shader Code Duplicate
@@ -46,8 +96,7 @@ namespace Game
 		// delta between two tiles
 		public struct HotDelta
 		{
-			public float hor;
-			public float vert;
+			public float[] dir;
 		}
 		#endregion
 
@@ -147,17 +196,10 @@ namespace Game
 			}
 			public float[] Masses;
 		};
-		// deltas for one tile (0 is FROM left, 1 is FROM right)
-		public struct GasTileDelta
-		{
-			public GasMass fromLeft;
-			public GasMass fromRight;
-		}
 		// delta between two tiles (0 is vertical, 1 is horizontal)
 		public struct GasDelta
 		{
-			public GasTileDelta vert;
-			public GasTileDelta hor;
+			public GasMass[] dir;
 		}
 
 		public const int NumGasses = 2;
@@ -210,17 +252,9 @@ namespace Game
 			return c;
 		}
 
-		public static int getHorTileFor(int deltaTile)
+		public static int getTile(int2 deltaTile)
 		{
-			return deltaTile + 1;
-		}
-		public static int getVertTileFor(int deltaTile)
-		{
-			return deltaTile + DimensionX;
-		}
-		public static int getGasDeltaTile(int deltaTile, int isVertical)
-		{
-			return deltaTile * 2 + isVertical;
+			return deltaTile.x + deltaTile.y * DimensionX;
 		}
 
 		// equation computed at https://www.desmos.com/calculator and wolfram
@@ -251,41 +285,50 @@ namespace Game
 			computeGasFlows(diff, out dPercA, out dPercB);
 		}
 
-		public static GasTileDelta finalGasDelta(GasMass a, GasMass b, float aH, float bH, out float energyDelta)
+		public static GasMass getGasSentFromCenter(GasMass center, GasMass neighbor, float aH, float bH, out float energyDelta)
 		{
-			findTotalGasDeltas(getTotalMass(a), getTotalMass(b), out float aSent, out float bSent);
-			GasTileDelta t;
-			t.fromLeft = mul(a, aSent);
-			t.fromRight = mul(b, bSent);
+			findTotalGasDeltas(getTotalMass(center), getTotalMass(neighbor), out float aSent, out float bSent);
+			GasMass c = mul(center, aSent);
 
 			energyDelta = (bH * bSent - aH * aSent);
-			return t;
+			return c;
 		}
 
 		// gasMassDeltas: [1,2] [2,3] ... [1,n +1] [2,n2]
-		public static void gasAndEnergyDeltas(GasMass[] gasTiles, HotMass[] energyTiles, int deltaTile, GasDelta[] gasMassDeltas, HotDelta[] gasEnergyDeltas)
+		public static void gasAndEnergyDeltas(GasMass[] gasTiles, HotMass[] energyTiles, int2 pos, GasDelta[] gasMassDeltas, HotDelta[] gasEnergyDeltas)
 		{
-			int horTile = getHorTileFor(deltaTile);
-			int vertTile = getVertTileFor(deltaTile);
+			uint fromSide = 0;
+			for (fromSide = 0; fromSide < NumSides; ++fromSide)
+			{
+				int2 neighbor = Offsets[fromSide] + pos;
+				GasMass c = gasTiles[getTile(pos)];
+				float eC = energyTiles[getTile(pos)].Energy;
+				GasMass n = gasTiles[getTile(neighbor)];
+				float nC = energyTiles[getTile(neighbor)].Energy;
 
-			GasTileDelta hor = finalGasDelta(gasTiles[deltaTile], gasTiles[horTile], energyTiles[deltaTile].Energy, energyTiles[horTile].Energy, out float eHor);
-			GasTileDelta vert = finalGasDelta(gasTiles[deltaTile], gasTiles[vertTile], energyTiles[deltaTile].Energy, energyTiles[vertTile].Energy, out float eVert);
-
-			// new gas flow without conservation
-			gasMassDeltas[deltaTile].hor = hor;
-			gasMassDeltas[deltaTile].vert = vert;
-
-			gasEnergyDeltas[deltaTile].hor = eHor;
-			gasEnergyDeltas[deltaTile].vert = eVert;
+				GasMass gasDelta = getGasSentFromCenter(c, n, eC, nC, out float qDelta);
+				gasMassDeltas[getTile(pos)].dir[fromSide] = gasDelta;
+				gasEnergyDeltas[getTile(pos)].dir[fromSide] = qDelta;
+			}
 		}
 
-		public static void diffuseGasDeltas(GasDelta[] oldMassDeltas, int deltaTile, GasDelta[] newMassDeltas)
+		// reference algorithm.png
+		public static void diffuseGasDeltas(GasDelta[] oldMassDeltas, HotDelta[] oldEnergyDeltas, int2 pos, GasDelta[] newMassDeltas, HotDelta[] newEnergyDeltas)
 		{
-			newMassDeltas[deltaTile].hor.fromLeft = oldMassDeltas[getHorTileFor(deltaTile)].hor.fromLeft;
-			newMassDeltas[deltaTile].hor.fromRight = oldMassDeltas[getHorTileFor(deltaTile)].hor.fromRight;
+			uint fromSide = 0;
+			for (fromSide = 0; fromSide < NumSides; ++fromSide)
+			{
+				uint otherSide = switch_side(fromSide);
+				int2 neighbor = Offsets[fromSide] + pos;
+				GasMass gasFromNeighbor = oldMassDeltas[getTile(neighbor)].dir[otherSide];
+				float eFromNeighbor = oldEnergyDeltas[getTile(neighbor)].dir[otherSide];
 
-			newMassDeltas[deltaTile].vert.fromLeft = oldMassDeltas[getVertTileFor(deltaTile)].vert.fromLeft;
-			newMassDeltas[deltaTile].vert.fromRight = oldMassDeltas[getVertTileFor(deltaTile)].vert.fromRight;
+				// todo apply new deltas
+				// also update how deltas are updated in gasAndEnergyDeltas
+				GasMass gasDelta = getGasSentFromCenter(c, n, eC, nC, out float qDelta);
+				gasMassDeltas[getTile(pos)].dir[fromSide] = gasDelta;
+				gasEnergyDeltas[getTile(pos)].dir[fromSide] = qDelta;
+			}
 		}
 		#endregion
 
